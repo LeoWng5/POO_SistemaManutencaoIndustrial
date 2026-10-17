@@ -13,6 +13,7 @@ public class Maquina extends Equipamento {
         super(id, nome, status);
         this.modelo = modelo;
         this.fabricante = fabricante;
+        this.dataAquisicao = dataAquisicao;
     }
 
     //Métodos Setters e Getters
