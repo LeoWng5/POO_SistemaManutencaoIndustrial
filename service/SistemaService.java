@@ -94,6 +94,39 @@ public class SistemaService {
         } catch (IOException e) { System.out.println("Erro ao salvar: " + e.getMessage()); }
     }
 
+        public void listarMaquinas() {
+        if (maquinas.isEmpty()) {
+            System.out.println("Nenhuma máquina cadastrada.");
+            return;
+        }
+        System.out.println("--- INVENTÁRIO DE MÁQUINAS ---");
+        for (Maquina m : maquinas) {
+            System.out.println("[" + m.getId() + "] " + m.getNome() + " | Modelo: " + m.getModelo() + " | Status: " + m.getStatus());
+        }
+    }
+
+    public void listarTecnicos() {
+        if (tecnicos.isEmpty()) {
+            System.out.println("Nenhum técnico cadastrado.");
+            return;
+        }
+        System.out.println("--- EQUIPE DE TÉCNICOS ---");
+        for (Tecnico t : tecnicos) {
+            System.out.println("[" + t.getId() + "] " + t.getNome() + " | Especialidade: " + t.getEspecialidade() + " | Status: " + (t.isDisponivel() ? "DISPONÍVEL" : "OCUPADO"));
+        }
+    }
+
+    public void listarPecas() {
+        if (pecas.isEmpty()) {
+            System.out.println("Nenhuma peça no estoque.");
+            return;
+        }
+        System.out.println("--- INVENTÁRIO DE PEÇAS ---");
+        for (Peca p : pecas) {
+            System.out.println("[" + p.getId() + "] " + p.getNome() + " | Qtd em estoque: " + p.getQuantidadeEstoque() + " | Valor: R$ " + p.getValorUnitario());
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public void carregar() {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("dados.dat"))) {
