@@ -1,8 +1,9 @@
 package classes;
 
 import java.time.LocalDateTime;
+import java.io.Serializable;
 
-public class Falha {
+public class Falha implements Serializable{
     private String id;
     private LocalDateTime dataHora;
     private String descricao;

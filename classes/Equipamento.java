@@ -1,6 +1,8 @@
 package classes;
 
-public abstract class  Equipamento {
+import java.io.Serializable;
+
+public abstract class  Equipamento implements Serializable{
     private String id;
     private String nome;
     private String status;

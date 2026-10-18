@@ -1,8 +1,9 @@
 package classes;
 
+import java.io.Serializable;
 import exception.EstoqueInsuficienteException;
 
-public class Peca {
+public class Peca implements Serializable{
     private String id;
     private String nome;
     private String descricao;

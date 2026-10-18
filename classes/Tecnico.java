@@ -1,6 +1,8 @@
 package classes;
 
-public class Tecnico {
+import java.io.Serializable;
+
+public class Tecnico implements Serializable{
     private String id;
     private String nome;
     private String especialidade;
