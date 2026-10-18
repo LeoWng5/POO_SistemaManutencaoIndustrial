@@ -52,23 +52,49 @@ public abstract class Manutencao implements Serializable { // <-- Adicionado Ser
     public abstract void exibirDetalhes();
 
     // Getters e Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; } // <-- Adicionado
+    public String getId() { 
+        return id; 
+    }
+    public void setId(String id) { 
+        this.id = id; 
+    }
 
-    public LocalDate getData() { return data; }
+    public LocalDate getData() { 
+        return data; 
+    }
     
-    public String getDescricao() { return descricao; }
-    public void setDescricao(String descricao) { this.descricao = descricao; } // <-- Adicionado
+    public String getDescricao() { 
+        return descricao; 
+    }
+    public void setDescricao(String descricao) { 
+        this.descricao = descricao; 
+    }
 
-    public double getCusto() { return custo; }
-    public void setCusto(double custo) { this.custo = custo; } // <-- Adicionado
+    public double getCusto() { 
+        return custo; 
+    }
+    public void setCusto(double custo) { 
+        this.custo = custo; 
+    } 
 
-    public Tecnico getTecnico() { return tecnico; }
-    public void setTecnico(Tecnico tecnico) { this.tecnico = tecnico; }
+    public Tecnico getTecnico() { 
+        return tecnico; 
+    }
+    public void setTecnico(Tecnico tecnico) { 
+        this.tecnico = tecnico; 
+    }
 
-    public Maquina getMaquina() { return maquina; }
-    public void setMaquina(Maquina maquina) { this.maquina = maquina; } // <-- Adicionado
+    public Maquina getMaquina() { 
+        return maquina; 
+    }
+    public void setMaquina(Maquina maquina) { 
+        this.maquina = maquina; 
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getStatus() { 
+        return status; 
+    }
+    public void setStatus(String status) { 
+        this.status = status; 
+    }
 }
