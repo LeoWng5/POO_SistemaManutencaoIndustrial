@@ -21,6 +21,7 @@ public class App {
         int op = -1;
 
         while (op != 0) {
+                    while (op != 0) {
             System.out.print("\033[H\033[2J"); // Limpa a tela no Linux/Mac
             System.out.flush();
             System.out.println(CIANO + "======================================================");
@@ -34,13 +35,17 @@ public class App {
             System.out.println(AMARELO + " 6 " + RESET + " - Atribuir Técnico");
             System.out.println(VERMELHO + " 7 " + RESET + " - Concluir Manutenção");
             System.out.println(VERDE + " 8 " + RESET + " - Relatório de Manutenções");
+            System.out.println(CIANO + "--- CONSULTAS ---" + RESET);
+            System.out.println(CIANO + " 9 " + RESET + " - Listar Máquinas");
+            System.out.println(CIANO + " 10" + RESET + " - Listar Técnicos");
+            System.out.println(CIANO + " 11" + RESET + " - Listar Peças em Estoque");
             System.out.println(" 0 - Salvar e Sair");
             System.out.println(CIANO + "======================================================" + RESET);
             System.out.print("Digite a opção desejada: ");
 
             try {
                 op = Integer.parseInt(sc.nextLine());
-                System.out.println(); // Pula linha
+                System.out.println();
                 
                 switch (op) {
                     case 1:
@@ -108,7 +113,19 @@ public class App {
                         System.out.println(CIANO + "--- RELATÓRIO GERAL DE MANUTENÇÕES ---" + RESET);
                         service.listarManutencoes();
                         break;
+                    
+                    case 9:
+                        service.listarMaquinas();
+                        break;
                         
+                    case 10:
+                        service.listarTecnicos();
+                        break;
+                        
+                    case 11:
+                        service.listarPecas();
+                        break;
+
                     case 0:
                         service.salvar();
                         System.out.println(VERDE + "💾 Dados salvos. Encerrando sistema..." + RESET);
@@ -129,5 +146,6 @@ public class App {
             }
         }
         sc.close();
+        }
     }
 }
