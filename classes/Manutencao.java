@@ -47,6 +47,8 @@ public abstract class Manutencao implements Serializable {
     public abstract double calcularCusto();
     public abstract void exibirDetalhes();
 
+
+    //Méotods Setters e Getters
     public String getId() {
         return id;
     }
