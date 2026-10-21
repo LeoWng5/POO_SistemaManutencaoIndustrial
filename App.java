@@ -21,7 +21,6 @@ public class App {
         int op = -1;
 
         while (op != 0) {
-                    while (op != 0) {
             System.out.print("\033[H\033[2J"); // Limpa a tela no Linux/Mac
             System.out.flush();
             System.out.println(CIANO + "======================================================");
@@ -33,12 +32,13 @@ public class App {
             System.out.println(AMARELO + " 4 " + RESET + " - Registrar Falha");
             System.out.println(AMARELO + " 5 " + RESET + " - Abrir Manutenção");
             System.out.println(AMARELO + " 6 " + RESET + " - Atribuir Técnico");
-            System.out.println(VERMELHO + " 7 " + RESET + " - Concluir Manutenção");
-            System.out.println(VERDE + " 8 " + RESET + " - Relatório de Manutenções");
+            System.out.println(AMARELO + " 7 " + RESET + " - Adicionar Peça à Manutenção"); // NOVA OPÇÃO
+            System.out.println(VERMELHO + " 8 " + RESET + " - Concluir Manutenção");
+            System.out.println(VERDE + " 9 " + RESET + " - Relatório de Manutenções");
             System.out.println(CIANO + "--- CONSULTAS ---" + RESET);
-            System.out.println(CIANO + " 9 " + RESET + " - Listar Máquinas");
-            System.out.println(CIANO + " 10" + RESET + " - Listar Técnicos");
-            System.out.println(CIANO + " 11" + RESET + " - Listar Peças em Estoque");
+            System.out.println(CIANO + " 10" + RESET + " - Listar Máquinas");
+            System.out.println(CIANO + " 11" + RESET + " - Listar Técnicos");
+            System.out.println(CIANO + " 12" + RESET + " - Listar Peças em Estoque");
             System.out.println(" 0 - Salvar e Sair");
             System.out.println(CIANO + "======================================================" + RESET);
             System.out.print("Digite a opção desejada: ");
@@ -101,28 +101,36 @@ public class App {
                         service.atribuirTecnico(idMan, idTec);
                         System.out.println(VERDE + "✔ Técnico alocado na manutenção!" + RESET);
                         break;
-                        
+
                     case 7:
-                        System.out.println(VERMELHO + "--- CONCLUIR MANUTENÇÃO ---" + RESET);
-                        System.out.print("ID da Manutenção: "); String idConc = sc.nextLine();
-                        service.concluirManutencao(idConc);
-                        System.out.println(VERDE + "✔ Manutenção concluída! Custo calculado." + RESET);
+                        System.out.println(AMARELO + "--- ADICIONAR PEÇA À MANUTENÇÃO ---" + RESET);
+                        System.out.print("ID da Manutenção (ex: M1): "); String idManPeca = sc.nextLine();
+                        System.out.print("ID da Peça (ex: P1): "); String idPec = sc.nextLine();
+                        System.out.print("Quantidade utilizada: "); int qtdPeca = Integer.parseInt(sc.nextLine());
+                        service.adicionarPecaNaManutencao(idManPeca, idPec, qtdPeca);
+                        System.out.println(VERDE + "✔ Peça adicionada e estoque atualizado!" + RESET);
                         break;
                         
                     case 8:
+                        System.out.println(VERMELHO + "--- CONCLUIR MANUTENÇÃO ---" + RESET);
+                        System.out.print("ID da Manutenção: "); String idConc = sc.nextLine();
+                        service.concluirManutencao(idConc);
+                        break;
+                        
+                    case 9:
                         System.out.println(CIANO + "--- RELATÓRIO GERAL DE MANUTENÇÕES ---" + RESET);
                         service.listarManutencoes();
                         break;
                     
-                    case 9:
+                    case 10:
                         service.listarMaquinas();
                         break;
                         
-                    case 10:
+                    case 11:
                         service.listarTecnicos();
                         break;
                         
-                    case 11:
+                    case 12:
                         service.listarPecas();
                         break;
 
@@ -134,10 +142,10 @@ public class App {
                     default:
                         System.out.println(VERMELHO + "Opção inválida!" + RESET);
                 }
-            } catch (MaquinaInexistenteException | MaquinaInativaException | TecnicoIndisponivelException | ManutencaoFinalizadaException e) {
+            } catch (MaquinaInexistenteException | MaquinaInativaException | TecnicoIndisponivelException | ManutencaoFinalizadaException | EstoqueInsuficienteException e) {
                 System.out.println("\n" + VERMELHO + "❌ ERRO DE NEGÓCIO: " + e.getMessage() + RESET);
             } catch (Exception e) {
-                System.out.println("\n" + VERMELHO + "❌ ERRO: Dado inválido digitado." + RESET);
+                System.out.println("\n" + VERMELHO + "❌ ERRO: " + e.getMessage() + RESET);
             }
             
             if (op != 0) {
@@ -146,6 +154,5 @@ public class App {
             }
         }
         sc.close();
-        }
     }
 }

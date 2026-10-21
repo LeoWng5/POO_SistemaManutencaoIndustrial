@@ -68,15 +68,47 @@ public class SistemaService {
         }
     }
 
+    // MÉTODO NOVO: Adicionar peça e baixar do estoque
+    public void adicionarPecaNaManutencao(String idManutencao, String idPeca, int quantidade) 
+            throws EstoqueInsuficienteException, Exception {
+        
+        Manutencao manutencao = null;
+        for (Manutencao m : manutencoes) {
+            if (m.getId().equals(idManutencao)) {
+                manutencao = m;
+                break;
+            }
+        }
+        
+        if (manutencao == null) {
+            throw new Exception("Manutenção não encontrada.");
+        }
+        
+        if (manutencao.getStatus().equals("CONCLUIDA")) {
+            throw new Exception("Não é possível adicionar peças a uma manutenção já concluída.");
+        }
+
+        Peca peca = buscarPeca(idPeca);
+        if (peca == null) {
+            throw new Exception("Peça não encontrada no estoque.");
+        }
+
+        manutencao.adicionarPeca(peca, quantidade); 
+    }
+
     public void concluirManutencao(String idManutencao) throws ManutencaoFinalizadaException {
         for (Manutencao m : manutencoes) {
             if (m.getId().equals(idManutencao)) {
                 if (m.getStatus().equals("CONCLUIDA")) {
                     throw new ManutencaoFinalizadaException("Essa manutenção já foi finalizada.");
                 }
-                m.concluir();
+                m.concluir(); 
+                
                 if (m.getTecnico() != null) m.getTecnico().liberar();
                 m.getMaquina().setStatus("ATIVA");
+                
+                System.out.println("Manutenção " + m.getId() + " concluída!");
+                System.out.println("Custo total (Mão de obra + Peças): R$ " + String.format("%.2f", m.getCusto()));
                 return;
             }
         }
@@ -94,7 +126,7 @@ public class SistemaService {
         } catch (IOException e) { System.out.println("Erro ao salvar: " + e.getMessage()); }
     }
 
-        public void listarMaquinas() {
+    public void listarMaquinas() {
         if (maquinas.isEmpty()) {
             System.out.println("Nenhuma máquina cadastrada.");
             return;
