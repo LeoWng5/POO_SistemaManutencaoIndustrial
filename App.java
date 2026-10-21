@@ -3,283 +3,278 @@ import exception.*;
 import service.SistemaService;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.time.LocalDate;
+import java.util.List;
 
-public class App {
+public class App extends JFrame {
 
-    private static SistemaService service = new SistemaService();
+    private SistemaService service = new SistemaService();
 
-    public static void main(String[] args) {
-        // Carrega os dados salvos
+    // Modelos das Tabelas
+    private DefaultTableModel modeloMaquinas;
+    private DefaultTableModel modeloTecnicos;
+    private DefaultTableModel modeloPecas;
+    private DefaultTableModel modeloManutencoes;
+
+    public App() {
         service.carregar();
 
-        // Loop principal do sistema
-        while (true) {
-            String[] opcoesMenu = {
-                "1 - Cadastrar Máquina",
-                "2 - Cadastrar Técnico",
-                "3 - Cadastrar Peça",
-                "4 - Excluir Máquina",
-                "5 - Registrar Falha",
-                "6 - Abrir Manutenção",
-                "7 - Atribuir Técnico",
-                "8 - Adicionar Peça à Manutenção",
-                "9 - Concluir Manutenção",
-                "10 - Relatório de Manutenções (Console)",
-                "11 - Listar Máquinas (Console)",
-                "12 - Listar Técnicos (Console)",
-                "13 - Listar Peças (Console)",
-                "0 - Salvar e Sair"
-            };
+        setTitle("🏭 Sistema de Gestão de Manutenção Industrial");
+        setSize(1000, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
 
-            String escolha = (String) JOptionPane.showInputDialog(
-                    null,
-                    "Selecione uma opção:\n(Nota: As listagens 10 a 13 aparecerão no terminal/console)",
-                    "🏭 Sistema de Manutenção Industrial",
-                    JOptionPane.PLAIN_MESSAGE,
-                    null,
-                    opcoesMenu,
-                    opcoesMenu[0]
-            );
+        // --- PAINEL ESQUERDO (BOTÕES) ---
+        JPanel painelBotoes = new JPanel();
+        painelBotoes.setLayout(new GridLayout(12, 1, 5, 5)); // 12 linhas, 1 coluna
+        painelBotoes.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        painelBotoes.setPreferredSize(new Dimension(220, 0));
 
-            // Se o usuário fechar a janela ou clicar em Cancelar
-            if (escolha == null) {
-                service.salvar();
-                JOptionPane.showMessageDialog(null, "Dados salvos. Encerrando sistema...", "Adeus", JOptionPane.INFORMATION_MESSAGE);
-                break;
-            }
+        JButton btnCadMaquina = new JButton("Cadastrar Máquina");
+        JButton btnCadTecnico = new JButton("Cadastrar Técnico");
+        JButton btnCadPeca = new JButton("Cadastrar Peça");
+        JButton btnExcluirMaquina = new JButton("Excluir Máquina");
+        JButton btnRegistrarFalha = new JButton("Registrar Falha");
+        JButton btnAbrirManutencao = new JButton("Abrir Manutenção");
+        JButton btnAtribuirTecnico = new JButton("Atribuir Técnico");
+        JButton btnAdicionarPeca = new JButton("Usar Peça na Manutenção");
+        JButton btnConcluirManutencao = new JButton("Concluir Manutenção");
+        JButton btnAtualizar = new JButton("🔄 Atualizar Tabelas");
+        JButton btnSalvar = new JButton("💾 Salvar Dados");
 
-            try {
-                int op = Integer.parseInt(escolha.split(" ")[0]);
+        // Adicionando ações aos botões
+        btnCadMaquina.addActionListener(e -> cadastrarMaquina());
+        btnCadTecnico.addActionListener(e -> cadastrarTecnico());
+        btnCadPeca.addActionListener(e -> cadastrarPeca());
+        btnExcluirMaquina.addActionListener(e -> excluirMaquina());
+        btnRegistrarFalha.addActionListener(e -> registrarFalha());
+        btnAbrirManutencao.addActionListener(e -> abrirManutencao());
+        btnAtribuirTecnico.addActionListener(e -> atribuirTecnico());
+        btnAdicionarPeca.addActionListener(e -> adicionarPecaManutencao());
+        btnConcluirManutencao.addActionListener(e -> concluirManutencao());
+        btnAtualizar.addActionListener(e -> atualizarTabelas());
+        btnSalvar.addActionListener(e -> {
+            service.salvar();
+            JOptionPane.showMessageDialog(this, "Dados salvos com sucesso!");
+        });
 
-                if (op == 0) {
-                    service.salvar();
-                    JOptionPane.showMessageDialog(null, "💾 Dados salvos com sucesso. Encerrando...", "Saindo", JOptionPane.INFORMATION_MESSAGE);
-                    break;
-                }
+        painelBotoes.add(btnCadMaquina);
+        painelBotoes.add(btnCadTecnico);
+        painelBotoes.add(btnCadPeca);
+        painelBotoes.add(btnExcluirMaquina);
+        painelBotoes.add(btnRegistrarFalha);
+        painelBotoes.add(btnAbrirManutencao);
+        painelBotoes.add(btnAtribuirTecnico);
+        painelBotoes.add(btnAdicionarPeca);
+        painelBotoes.add(btnConcluirManutencao);
+        painelBotoes.add(btnAtualizar);
+        painelBotoes.add(btnSalvar);
 
-                switch (op) {
-                    case 1: cadastrarMaquina(); break;
-                    case 2: cadastrarTecnico(); break;
-                    case 3: cadastrarPeca(); break;
-                    case 4: excluirMaquina(); break;
-                    case 5: registrarFalha(); break;
-                    case 6: abrirManutencao(); break;
-                    case 7: atribuirTecnico(); break;
-                    case 8: adicionarPecaManutencao(); break;
-                    case 9: concluirManutencao(); break;
-                    
-                    case 10:
-                        service.listarManutencoes();
-                        JOptionPane.showMessageDialog(null, "Relatório impresso no console/terminal.\nVerifique a aba de saída do seu VS Code.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
-                        break;
-                    case 11:
-                        service.listarMaquinas();
-                        JOptionPane.showMessageDialog(null, "Lista de máquinas impressa no console/terminal.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
-                        break;
-                    case 12:
-                        service.listarTecnicos();
-                        JOptionPane.showMessageDialog(null, "Lista de técnicos impressa no console/terminal.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
-                        break;
-                    case 13:
-                        service.listarPecas();
-                        JOptionPane.showMessageDialog(null, "Lista de peças impressa no console/terminal.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
-                        break;
-                }
-            } catch (Exception e) {
-                // Catch genérico para segurança
-                JOptionPane.showMessageDialog(null, "❌ ERRO INESPERADO:\n" + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+        // --- PAINEL DIREITO (TABELAS) ---
+        JTabbedPane abas = new JTabbedPane();
+
+        // Tabela de Máquinas
+        modeloMaquinas = new DefaultTableModel(new String[]{"ID", "Nome", "Modelo", "Fabricante", "Status"}, 0);
+        abas.addTab("Máquinas", new JScrollPane(new JTable(modeloMaquinas)));
+
+        // Tabela de Técnicos
+        modeloTecnicos = new DefaultTableModel(new String[]{"ID", "Nome", "Especialidade", "Telefone", "Status"}, 0);
+        abas.addTab("Técnicos", new JScrollPane(new JTable(modeloTecnicos)));
+
+        // Tabela de Peças
+        modeloPecas = new DefaultTableModel(new String[]{"ID", "Nome", "Categoria", "Qtd Estoque", "Valor (R$)"}, 0);
+        abas.addTab("Estoque de Peças", new JScrollPane(new JTable(modeloPecas)));
+
+        // Tabela de Manutenções
+        modeloManutencoes = new DefaultTableModel(new String[]{"ID", "Máquina", "Técnico", "Status", "Custo Total (R$)"}, 0);
+        abas.addTab("Manutenções", new JScrollPane(new JTable(modeloManutencoes)));
+
+        // Adicionando os painéis à janela principal
+        add(painelBotoes, BorderLayout.WEST);
+        add(abas, BorderLayout.CENTER);
+
+        // Carrega os dados nas tabelas logo ao abrir
+        atualizarTabelas();
+    }
+
+    // --- MÉTODO PARA PUXAR OS DADOS E ATUALIZAR AS TABELAS ---
+    private void atualizarTabelas() {
+        // Limpa as tabelas
+        modeloMaquinas.setRowCount(0);
+        modeloTecnicos.setRowCount(0);
+        modeloPecas.setRowCount(0);
+        modeloManutencoes.setRowCount(0);
+
+        // Preenche Máquinas
+        for (Maquina m : service.getMaquinas()) {
+            modeloMaquinas.addRow(new Object[]{m.getId(), m.getNome(), m.getModelo(), m.getFabricante(), m.getStatus()});
+        }
+
+        // Preenche Técnicos
+        for (Tecnico t : service.getTecnicos()) {
+            modeloTecnicos.addRow(new Object[]{t.getId(), t.getNome(), t.getEspecialidade(), t.getTelefone(), t.isDisponivel() ? "DISPONÍVEL" : "OCUPADO"});
+        }
+
+        // Preenche Peças
+        for (Peca p : service.getPecas()) {
+            modeloPecas.addRow(new Object[]{p.getId(), p.getNome(), p.getCategoria(), p.getQuantidadeEstoque(), String.format("%.2f", p.getValorUnitario())});
+        }
+
+        // Preenche Manutenções
+        for (Manutencao m : service.getManutencoes()) {
+            String nomeMaquina = (m.getMaquina() != null) ? m.getMaquina().getNome() : "N/A";
+            String nomeTecnico = (m.getTecnico() != null) ? m.getTecnico().getNome() : "Não atribuído";
+            modeloManutencoes.addRow(new Object[]{m.getId(), nomeMaquina, nomeTecnico, m.getStatus(), String.format("%.2f", m.getCusto())});
         }
     }
 
-    // --- MÉTODOS DE INTERFACE (JOptionPane) ---
-
-    private static void cadastrarMaquina() {
-        String id = JOptionPane.showInputDialog("ID da Máquina (ex: M1):");
-        if (id == null) return;
-        String nome = JOptionPane.showInputDialog("Nome da Máquina:");
+    // --- MÉTODOS DE AÇÃO (JANELAS DE CADASTRO) ---
+    
+    private void cadastrarMaquina() {
+        String id = JOptionPane.showInputDialog(this, "ID da Máquina (ex: M1):");
+        if (id == null || id.isEmpty()) return;
+        String nome = JOptionPane.showInputDialog(this, "Nome da Máquina:");
         if (nome == null) return;
-        String modelo = JOptionPane.showInputDialog("Modelo:");
+        String modelo = JOptionPane.showInputDialog(this, "Modelo:");
         if (modelo == null) return;
-        String fabricante = JOptionPane.showInputDialog("Fabricante:");
+        String fabricante = JOptionPane.showInputDialog(this, "Fabricante:");
         if (fabricante == null) return;
 
-        int confirm = JOptionPane.showConfirmDialog(null,
-                "Confirmar cadastro da máquina?\nID: " + id + "\nNome: " + nome + "\nModelo: " + modelo,
-                "Confirmação", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            service.cadastrarMaquina(new Maquina(id, nome, "ATIVA", modelo, fabricante, LocalDate.now()));
-            JOptionPane.showMessageDialog(null, "✔ Máquina cadastrada com sucesso!");
-        }
+        service.cadastrarMaquina(new Maquina(id, nome, "ATIVA", modelo, fabricante, LocalDate.now()));
+        atualizarTabelas(); // Atualiza na hora!
     }
 
-    private static void cadastrarTecnico() {
-        String id = JOptionPane.showInputDialog("ID do Técnico (ex: T1):");
-        if (id == null) return;
-        String nome = JOptionPane.showInputDialog("Nome do Técnico:");
+    private void cadastrarTecnico() {
+        String id = JOptionPane.showInputDialog(this, "ID do Técnico (ex: T1):");
+        if (id == null || id.isEmpty()) return;
+        String nome = JOptionPane.showInputDialog(this, "Nome do Técnico:");
         if (nome == null) return;
-        String especialidade = JOptionPane.showInputDialog("Especialidade:");
+        String especialidade = JOptionPane.showInputDialog(this, "Especialidade:");
         if (especialidade == null) return;
-        String telefone = JOptionPane.showInputDialog("Telefone:");
+        String telefone = JOptionPane.showInputDialog(this, "Telefone:");
         if (telefone == null) return;
 
-        int confirm = JOptionPane.showConfirmDialog(null,
-                "Confirmar cadastro do técnico?\nID: " + id + "\nNome: " + nome + "\nEspecialidade: " + especialidade,
-                "Confirmação", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            service.cadastrarTecnico(new Tecnico(id, nome, especialidade, telefone));
-            JOptionPane.showMessageDialog(null, "✔ Técnico cadastrado com sucesso!");
-        }
+        service.cadastrarTecnico(new Tecnico(id, nome, especialidade, telefone));
+        atualizarTabelas();
     }
 
-    private static void cadastrarPeca() {
-        String id = JOptionPane.showInputDialog("ID da Peça (ex: P1):");
-        if (id == null) return;
-        String nome = JOptionPane.showInputDialog("Nome da Peça:");
-        if (nome == null) return;
-        String qtdStr = JOptionPane.showInputDialog("Quantidade em estoque:");
-        if (qtdStr == null) return;
-        String valorStr = JOptionPane.showInputDialog("Valor unitário (R$):");
-        if (valorStr == null) return;
-
+    private void cadastrarPeca() {
         try {
-            int qtd = Integer.parseInt(qtdStr);
-            double valor = Double.parseDouble(valorStr);
+            String id = JOptionPane.showInputDialog(this, "ID da Peça (ex: P1):");
+            if (id == null || id.isEmpty()) return;
+            String nome = JOptionPane.showInputDialog(this, "Nome da Peça:");
+            if (nome == null) return;
+            int qtd = Integer.parseInt(JOptionPane.showInputDialog(this, "Quantidade em estoque:"));
+            double valor = Double.parseDouble(JOptionPane.showInputDialog(this, "Valor unitário (R$):"));
 
-            int confirm = JOptionPane.showConfirmDialog(null,
-                    "Confirmar cadastro da peça?\nID: " + id + "\nNome: " + nome + "\nQtd: " + qtd + "\nValor: R$ " + valor,
-                    "Confirmação", JOptionPane.YES_NO_OPTION);
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                service.cadastrarPeca(new Peca(id, nome, "Descrição", "Geral", qtd, 5, valor));
-                JOptionPane.showMessageDialog(null, "✔ Peça cadastrada com sucesso!");
-            }
+            service.cadastrarPeca(new Peca(id, nome, "Descrição", "Geral", qtd, 5, valor));
+            atualizarTabelas();
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(null, "❌ Erro: Quantidade e Valor devem ser números válidos.", "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Erro: Digite números válidos.", "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private static void excluirMaquina() {
-        String id = JOptionPane.showInputDialog("Digite o ID da Máquina que deseja excluir:");
+    private void excluirMaquina() {
+        String id = JOptionPane.showInputDialog(this, "ID da Máquina que deseja excluir:");
         if (id == null) return;
 
-        int confirm = JOptionPane.showConfirmDialog(null,
-                "Tem certeza que deseja excluir a máquina " + id + "?",
-                "Atenção", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-
+        int confirm = JOptionPane.showConfirmDialog(this, "Tem certeza que deseja excluir a máquina " + id + "?", "Atenção", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             if (service.excluirMaquina(id)) {
-                JOptionPane.showMessageDialog(null, "✔ Máquina excluída com sucesso!");
+                JOptionPane.showMessageDialog(this, "Máquina excluída!");
+                atualizarTabelas();
             } else {
-                JOptionPane.showMessageDialog(null, "❌ Máquina não encontrada.", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Máquina não encontrada.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    private static void registrarFalha() {
-        String idMaquina = JOptionPane.showInputDialog("ID da Máquina quebrada:");
+    private void registrarFalha() {
+        String idMaquina = JOptionPane.showInputDialog(this, "ID da Máquina quebrada:");
         if (idMaquina == null) return;
-        String descricao = JOptionPane.showInputDialog("O que aconteceu?");
+        String descricao = JOptionPane.showInputDialog(this, "O que aconteceu?");
         if (descricao == null) return;
-
-        int confirm = JOptionPane.showConfirmDialog(null,
-                "Confirmar registro de falha na máquina " + idMaquina + "?",
-                "Confirmação", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                service.registrarFalha(descricao, idMaquina);
-                JOptionPane.showMessageDialog(null, "⚠ Falha registrada! Máquina paralisada.", "Aviso", JOptionPane.WARNING_MESSAGE);
-            } catch (MaquinaInexistenteException e) {
-                JOptionPane.showMessageDialog(null, "❌ Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private static void abrirManutencao() {
-        String idMaquina = JOptionPane.showInputDialog("ID da Máquina:");
-        if (idMaquina == null) return;
-        String descricao = JOptionPane.showInputDialog("Descrição do serviço:");
-        if (descricao == null) return;
-        String causa = JOptionPane.showInputDialog("Causa raiz:");
-        if (causa == null) return;
-
-        int confirm = JOptionPane.showConfirmDialog(null, "Confirmar abertura de manutenção corretiva?",
-                "Confirmação", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                service.abrirCorretiva(descricao, idMaquina, causa, "ALTA");
-                JOptionPane.showMessageDialog(null, "✔ Ordem de serviço aberta!");
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, "❌ Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private static void atribuirTecnico() {
-        String idManutencao = JOptionPane.showInputDialog("ID da Manutenção (ex: M1):");
-        if (idManutencao == null) return;
-        String idTecnico = JOptionPane.showInputDialog("ID do Técnico (ex: T1):");
-        if (idTecnico == null) return;
-
-        int confirm = JOptionPane.showConfirmDialog(null,
-                "Confirmar alocação do técnico " + idTecnico + " na manutenção " + idManutencao + "?",
-                "Confirmação", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                service.atribuirTecnico(idManutencao, idTecnico);
-                JOptionPane.showMessageDialog(null, "✔ Técnico alocado na manutenção!");
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, "❌ Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private static void adicionarPecaManutencao() {
-        String idManutencao = JOptionPane.showInputDialog("ID da Manutenção (ex: M1):");
-        if (idManutencao == null) return;
-        String idPeca = JOptionPane.showInputDialog("ID da Peça (ex: P1):");
-        if (idPeca == null) return;
-        String qtdStr = JOptionPane.showInputDialog("Quantidade utilizada:");
-        if (qtdStr == null) return;
 
         try {
-            int qtd = Integer.parseInt(qtdStr);
-            int confirm = JOptionPane.showConfirmDialog(null,
-                    "Confirmar uso de " + qtd + " unidade(s) da peça " + idPeca + "?",
-                    "Confirmação", JOptionPane.YES_NO_OPTION);
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                service.adicionarPecaNaManutencao(idManutencao, idPeca, qtd);
-                JOptionPane.showMessageDialog(null, "✔ Peça adicionada e estoque atualizado!");
-            }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(null, "❌ Erro: A quantidade deve ser um número inteiro.", "Erro", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "❌ Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            service.registrarFalha(descricao, idMaquina);
+            JOptionPane.showMessageDialog(this, "Falha registrada! Máquina paralisada.");
+            atualizarTabelas();
+        } catch (MaquinaInexistenteException e) {
+            JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private static void concluirManutencao() {
-        String idManutencao = JOptionPane.showInputDialog("ID da Manutenção:");
+    private void abrirManutencao() {
+        String idMaquina = JOptionPane.showInputDialog(this, "ID da Máquina:");
+        if (idMaquina == null) return;
+        String descricao = JOptionPane.showInputDialog(this, "Descrição do serviço:");
+        if (descricao == null) return;
+        String causa = JOptionPane.showInputDialog(this, "Causa raiz:");
+        if (causa == null) return;
+
+        try {
+            service.abrirCorretiva(descricao, idMaquina, causa, "ALTA");
+            JOptionPane.showMessageDialog(this, "Ordem de serviço aberta!");
+            atualizarTabelas();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void atribuirTecnico() {
+        String idManutencao = JOptionPane.showInputDialog(this, "ID da Manutenção:");
+        if (idManutencao == null) return;
+        String idTecnico = JOptionPane.showInputDialog(this, "ID do Técnico:");
+        if (idTecnico == null) return;
+
+        try {
+            service.atribuirTecnico(idManutencao, idTecnico);
+            JOptionPane.showMessageDialog(this, "Técnico alocado!");
+            atualizarTabelas();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void adicionarPecaManutencao() {
+        try {
+            String idManutencao = JOptionPane.showInputDialog(this, "ID da Manutenção:");
+            if (idManutencao == null) return;
+            String idPeca = JOptionPane.showInputDialog(this, "ID da Peça:");
+            if (idPeca == null) return;
+            int qtd = Integer.parseInt(JOptionPane.showInputDialog(this, "Quantidade utilizada:"));
+
+            service.adicionarPecaNaManutencao(idManutencao, idPeca, qtd);
+            JOptionPane.showMessageDialog(this, "Peça adicionada e estoque atualizado!");
+            atualizarTabelas();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Erro: A quantidade deve ser um número.", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void concluirManutencao() {
+        String idManutencao = JOptionPane.showInputDialog(this, "ID da Manutenção:");
         if (idManutencao == null) return;
 
-        int confirm = JOptionPane.showConfirmDialog(null,
-                "Confirmar a conclusão da manutenção " + idManutencao + "?",
-                "Confirmação", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                service.concluirManutencao(idManutencao);
-                JOptionPane.showMessageDialog(null, "✔ Manutenção concluída!\nVerifique o custo no console.");
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, "❌ Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+        try {
+            service.concluirManutencao(idManutencao);
+            JOptionPane.showMessageDialog(this, "Manutenção concluída!");
+            atualizarTabelas();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    public static void main(String[] args) {
+        // Inicia a interface gráfica na thread correta do Swing
+        SwingUtilities.invokeLater(() -> {
+            App app = new App();
+            app.setVisible(true);
+        });
     }
 }

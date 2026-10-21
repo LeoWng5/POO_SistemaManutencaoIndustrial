@@ -168,4 +168,17 @@ public class SistemaService {
             manutencoes = (List<Manutencao>) ois.readObject();
         } catch (Exception e) { /* Primeira execução */ }
     }
+        // MÉTODOS GETTERS PARA A INTERFACE GRÁFICA (JTable)
+    public List<Maquina> getMaquinas() { 
+        return maquinas; 
+    }
+    public List<Tecnico> getTecnicos() { 
+        return tecnicos; 
+    }
+    public List<Peca> getPecas() { 
+        return pecas; 
+    }
+    public List<Manutencao> getManutencoes() { 
+        return manutencoes; 
+    }
 }
