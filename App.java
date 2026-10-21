@@ -6,7 +6,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.LocalDate;
-import java.util.List;
 
 public class App extends JFrame {
 
@@ -22,16 +21,37 @@ public class App extends JFrame {
         service.carregar();
 
         setTitle("🏭 Sistema de Gestão de Manutenção Industrial");
-        setSize(1000, 600);
+        setSize(1100, 700); // Aumentei um pouco para ficar mais confortável
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // --- PAINEL ESQUERDO (BOTÕES) ---
+        // ==========================================
+        // BARRA DE MENUS (TOPO) COM A OPÇÃO DE AJUDA
+        // ==========================================
+        JMenuBar barraMenu = new JMenuBar();
+        JMenu menuAjuda = new JMenu("Ajuda");
+        
+        JMenuItem itemTutorial = new JMenuItem("Como usar o sistema (?)");
+        itemTutorial.addActionListener(e -> exibirTutorial());
+        menuAjuda.add(itemTutorial);
+
+        JMenuItem itemSobre = new JMenuItem("Sobre");
+        itemSobre.addActionListener(e -> JOptionPane.showMessageDialog(this, 
+                "Sistema de Gestão de Manutenção Industrial\nVersão 1.0\n\nDesenvolvido para a disciplina de POO\nEngenharia de Controle e Automação - UNESP", 
+                "Sobre", JOptionPane.INFORMATION_MESSAGE));
+        menuAjuda.add(itemSobre);
+
+        barraMenu.add(menuAjuda);
+        setJMenuBar(barraMenu);
+
+        // ==========================================
+        // PAINEL ESQUERDO (BOTÕES)
+        // ==========================================
         JPanel painelBotoes = new JPanel();
-        painelBotoes.setLayout(new GridLayout(12, 1, 5, 5)); // 12 linhas, 1 coluna
+        painelBotoes.setLayout(new GridLayout(12, 1, 5, 5)); 
         painelBotoes.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        painelBotoes.setPreferredSize(new Dimension(220, 0));
+        painelBotoes.setPreferredSize(new Dimension(240, 0)); // Um pouco mais largo para o texto caber
 
         JButton btnCadMaquina = new JButton("Cadastrar Máquina");
         JButton btnCadTecnico = new JButton("Cadastrar Técnico");
@@ -45,7 +65,7 @@ public class App extends JFrame {
         JButton btnAtualizar = new JButton("🔄 Atualizar Tabelas");
         JButton btnSalvar = new JButton("💾 Salvar Dados");
 
-        // Adicionando ações aos botões
+        // Ações
         btnCadMaquina.addActionListener(e -> cadastrarMaquina());
         btnCadTecnico.addActionListener(e -> cadastrarTecnico());
         btnCadPeca.addActionListener(e -> cadastrarPeca());
@@ -73,57 +93,93 @@ public class App extends JFrame {
         painelBotoes.add(btnAtualizar);
         painelBotoes.add(btnSalvar);
 
-        // --- PAINEL DIREITO (TABELAS) ---
+        // ==========================================
+        // PAINEL DIREITO (TABELAS)
+        // ==========================================
         JTabbedPane abas = new JTabbedPane();
 
-        // Tabela de Máquinas
         modeloMaquinas = new DefaultTableModel(new String[]{"ID", "Nome", "Modelo", "Fabricante", "Status"}, 0);
         abas.addTab("Máquinas", new JScrollPane(new JTable(modeloMaquinas)));
 
-        // Tabela de Técnicos
         modeloTecnicos = new DefaultTableModel(new String[]{"ID", "Nome", "Especialidade", "Telefone", "Status"}, 0);
         abas.addTab("Técnicos", new JScrollPane(new JTable(modeloTecnicos)));
 
-        // Tabela de Peças
         modeloPecas = new DefaultTableModel(new String[]{"ID", "Nome", "Categoria", "Qtd Estoque", "Valor (R$)"}, 0);
         abas.addTab("Estoque de Peças", new JScrollPane(new JTable(modeloPecas)));
 
-        // Tabela de Manutenções
         modeloManutencoes = new DefaultTableModel(new String[]{"ID", "Máquina", "Técnico", "Status", "Custo Total (R$)"}, 0);
         abas.addTab("Manutenções", new JScrollPane(new JTable(modeloManutencoes)));
 
-        // Adicionando os painéis à janela principal
         add(painelBotoes, BorderLayout.WEST);
         add(abas, BorderLayout.CENTER);
 
-        // Carrega os dados nas tabelas logo ao abrir
         atualizarTabelas();
     }
 
-    // --- MÉTODO PARA PUXAR OS DADOS E ATUALIZAR AS TABELAS ---
+    // ==========================================
+    // MÉTODO DO TUTORIAL (O "?")
+    // ==========================================
+    private void exibirTutorial() {
+        String textoAjuda = 
+            "BEM-VINDO AO SISTEMA DE MANUTENÇÃO INDUSTRIAL!\n" +
+            "==================================================\n\n" +
+            "Para que o sistema funcione corretamente, siga a ordem lógica abaixo:\n\n" +
+            "1. CADASTROS BÁSICOS (Abas laterais):\n" +
+            "   - Cadastre a Máquina (ID, Nome, Modelo).\n" +
+            "   - Cadastre o Técnico (ID, Nome, Especialidade).\n" +
+            "   - Cadastre a Peça (ID, Nome, Qtd em estoque, Valor).\n\n" +
+            "2. REGISTRAR PROBLEMA:\n" +
+            "   - Clique em 'Registrar Falha'.\n" +
+            "   - Informe o ID da Máquina e o que aconteceu.\n" +
+            "   - A máquina ficará com o status 'QUEBRADA'.\n\n" +
+            "3. ABRIR MANUTENÇÃO:\n" +
+            "   - Clique em 'Abrir Manutenção'.\n" +
+            "   - Informe o ID da Máquina e a Causa Raiz.\n" +
+            "   - O sistema gerará um ID de Manutenção (ex: M1).\n\n" +
+            "4. ALOCAR TÉCNICO:\n" +
+            "   - Clique em 'Atribuir Técnico'.\n" +
+            "   - Informe o ID da Manutenção e o ID do Técnico.\n" +
+            "   - O técnico ficará 'OCUPADO'.\n\n" +
+            "5. USAR PEÇAS (Opcional):\n" +
+            "   - Clique em 'Usar Peça na Manutenção'.\n" +
+            "   - Informe o ID da Manutenção, ID da Peça e a Quantidade.\n" +
+            "   - O estoque será reduzido automaticamente!\n\n" +
+            "6. CONCLUIR MANUTENÇÃO:\n" +
+            "   - Clique em 'Concluir Manutenção'.\n" +
+            "   - Informe o ID da Manutenção.\n" +
+            "   - O custo total (Mão de obra + Peças) será calculado.\n" +
+            "   - A máquina voltará a ficar 'ATIVA' e o técnico 'DISPONÍVEL'.\n\n" +
+            "DICA: Clique em 'Atualizar Tabelas' ou em 'Salvar Dados' sempre que quiser garantir que as informações estão atualizadas e seguras!";
+
+        // Criando uma área de texto para o tutorial
+        JTextArea textArea = new JTextArea(textoAjuda);
+        textArea.setEditable(false);
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        textArea.setCaretPosition(0); // Volta o scroll pro topo
+
+        // Colocando numa barra de rolagem
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(550, 400));
+
+        // Exibindo a janela de ajuda
+        JOptionPane.showMessageDialog(this, scrollPane, "Tutorial de Uso - Ajuda", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     private void atualizarTabelas() {
-        // Limpa as tabelas
         modeloMaquinas.setRowCount(0);
         modeloTecnicos.setRowCount(0);
         modeloPecas.setRowCount(0);
         modeloManutencoes.setRowCount(0);
 
-        // Preenche Máquinas
         for (Maquina m : service.getMaquinas()) {
             modeloMaquinas.addRow(new Object[]{m.getId(), m.getNome(), m.getModelo(), m.getFabricante(), m.getStatus()});
         }
-
-        // Preenche Técnicos
         for (Tecnico t : service.getTecnicos()) {
             modeloTecnicos.addRow(new Object[]{t.getId(), t.getNome(), t.getEspecialidade(), t.getTelefone(), t.isDisponivel() ? "DISPONÍVEL" : "OCUPADO"});
         }
-
-        // Preenche Peças
         for (Peca p : service.getPecas()) {
             modeloPecas.addRow(new Object[]{p.getId(), p.getNome(), p.getCategoria(), p.getQuantidadeEstoque(), String.format("%.2f", p.getValorUnitario())});
         }
-
-        // Preenche Manutenções
         for (Manutencao m : service.getManutencoes()) {
             String nomeMaquina = (m.getMaquina() != null) ? m.getMaquina().getNome() : "N/A";
             String nomeTecnico = (m.getTecnico() != null) ? m.getTecnico().getNome() : "Não atribuído";
@@ -132,7 +188,6 @@ public class App extends JFrame {
     }
 
     // --- MÉTODOS DE AÇÃO (JANELAS DE CADASTRO) ---
-    
     private void cadastrarMaquina() {
         String id = JOptionPane.showInputDialog(this, "ID da Máquina (ex: M1):");
         if (id == null || id.isEmpty()) return;
@@ -144,7 +199,7 @@ public class App extends JFrame {
         if (fabricante == null) return;
 
         service.cadastrarMaquina(new Maquina(id, nome, "ATIVA", modelo, fabricante, LocalDate.now()));
-        atualizarTabelas(); // Atualiza na hora!
+        atualizarTabelas(); 
     }
 
     private void cadastrarTecnico() {
@@ -271,7 +326,6 @@ public class App extends JFrame {
     }
 
     public static void main(String[] args) {
-        // Inicia a interface gráfica na thread correta do Swing
         SwingUtilities.invokeLater(() -> {
             App app = new App();
             app.setVisible(true);
