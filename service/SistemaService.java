@@ -12,10 +12,23 @@ public class SistemaService {
     private List<Falha> falhas = new ArrayList<>();
     private List<Manutencao> manutencoes = new ArrayList<>();
 
+    // --- MÉTODOS DE CADASTRO ---
     public void cadastrarMaquina(Maquina m) { maquinas.add(m); }
     public void cadastrarTecnico(Tecnico t) { tecnicos.add(t); }
     public void cadastrarPeca(Peca p) { pecas.add(p); }
 
+    // --- MÉTODO DE EXCLUSÃO ---
+    public boolean excluirMaquina(String id) {
+        for (int i = 0; i < maquinas.size(); i++) {
+            if (maquinas.get(i).getId().equals(id)) {
+                maquinas.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // --- MÉTODOS DE BUSCA ---
     public Maquina buscarMaquina(String id) throws MaquinaInexistenteException {
         for (Maquina m : maquinas) {
             if (m.getId().equals(id)) return m;
@@ -37,6 +50,7 @@ public class SistemaService {
         return null;
     }
 
+    // --- REGRAS DE NEGÓCIO ---
     public void registrarFalha(String descricao, String idMaquina) throws MaquinaInexistenteException {
         Maquina m = buscarMaquina(idMaquina);
         falhas.add(new Falha("F" + (falhas.size() + 1), descricao, m));
@@ -68,7 +82,6 @@ public class SistemaService {
         }
     }
 
-    // MÉTODO NOVO: Adicionar peça e baixar do estoque
     public void adicionarPecaNaManutencao(String idManutencao, String idPeca, int quantidade) 
             throws EstoqueInsuficienteException, Exception {
         
@@ -80,18 +93,11 @@ public class SistemaService {
             }
         }
         
-        if (manutencao == null) {
-            throw new Exception("Manutenção não encontrada.");
-        }
-        
-        if (manutencao.getStatus().equals("CONCLUIDA")) {
-            throw new Exception("Não é possível adicionar peças a uma manutenção já concluída.");
-        }
+        if (manutencao == null) throw new Exception("Manutenção não encontrada.");
+        if (manutencao.getStatus().equals("CONCLUIDA")) throw new Exception("Manutenção já concluída.");
 
         Peca peca = buscarPeca(idPeca);
-        if (peca == null) {
-            throw new Exception("Peça não encontrada no estoque.");
-        }
+        if (peca == null) throw new Exception("Peça não encontrada no estoque.");
 
         manutencao.adicionarPeca(peca, quantidade); 
     }
@@ -114,23 +120,14 @@ public class SistemaService {
         }
     }
 
+    // --- LISTAGENS ---
     public void listarManutencoes() {
+        if (manutencoes.isEmpty()) { System.out.println("Nenhuma manutenção registrada."); return; }
         for (Manutencao m : manutencoes) m.exibirDetalhes();
     }
 
-    // Persistência
-    public void salvar() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("dados.dat"))) {
-            oos.writeObject(maquinas); oos.writeObject(tecnicos);
-            oos.writeObject(pecas); oos.writeObject(falhas); oos.writeObject(manutencoes);
-        } catch (IOException e) { System.out.println("Erro ao salvar: " + e.getMessage()); }
-    }
-
     public void listarMaquinas() {
-        if (maquinas.isEmpty()) {
-            System.out.println("Nenhuma máquina cadastrada.");
-            return;
-        }
+        if (maquinas.isEmpty()) { System.out.println("Nenhuma máquina cadastrada."); return; }
         System.out.println("--- INVENTÁRIO DE MÁQUINAS ---");
         for (Maquina m : maquinas) {
             System.out.println("[" + m.getId() + "] " + m.getNome() + " | Modelo: " + m.getModelo() + " | Status: " + m.getStatus());
@@ -138,10 +135,7 @@ public class SistemaService {
     }
 
     public void listarTecnicos() {
-        if (tecnicos.isEmpty()) {
-            System.out.println("Nenhum técnico cadastrado.");
-            return;
-        }
+        if (tecnicos.isEmpty()) { System.out.println("Nenhum técnico cadastrado."); return; }
         System.out.println("--- EQUIPE DE TÉCNICOS ---");
         for (Tecnico t : tecnicos) {
             System.out.println("[" + t.getId() + "] " + t.getNome() + " | Especialidade: " + t.getEspecialidade() + " | Status: " + (t.isDisponivel() ? "DISPONÍVEL" : "OCUPADO"));
@@ -149,14 +143,19 @@ public class SistemaService {
     }
 
     public void listarPecas() {
-        if (pecas.isEmpty()) {
-            System.out.println("Nenhuma peça no estoque.");
-            return;
-        }
+        if (pecas.isEmpty()) { System.out.println("Nenhuma peça no estoque."); return; }
         System.out.println("--- INVENTÁRIO DE PEÇAS ---");
         for (Peca p : pecas) {
             System.out.println("[" + p.getId() + "] " + p.getNome() + " | Qtd em estoque: " + p.getQuantidadeEstoque() + " | Valor: R$ " + p.getValorUnitario());
         }
+    }
+
+    // --- PERSISTÊNCIA ---
+    public void salvar() {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("dados.dat"))) {
+            oos.writeObject(maquinas); oos.writeObject(tecnicos);
+            oos.writeObject(pecas); oos.writeObject(falhas); oos.writeObject(manutencoes);
+        } catch (IOException e) { System.out.println("Erro ao salvar: " + e.getMessage()); }
     }
 
     @SuppressWarnings("unchecked")
