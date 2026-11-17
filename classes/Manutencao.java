@@ -1,24 +1,23 @@
 package classes;
 
 import exception.EstoqueInsuficienteException;
-import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class Manutencao implements Serializable {
-    private String id;
+public abstract class Manutencao {
+    private int id;
     private LocalDate data;
     private String descricao;
     private double custo;
     private Tecnico tecnico;
     private Maquina maquina;
     private String status;
-    
+
     // Lista com ItemPeca
     private List<ItemPeca> itens = new ArrayList<>();
 
-    public Manutencao(String id, String descricao, Maquina maquina) {
+    public Manutencao(int id, String descricao, Maquina maquina) {
         this.id = id;
         this.descricao = descricao;
         this.maquina = maquina;
@@ -26,9 +25,15 @@ public abstract class Manutencao implements Serializable {
         this.status = "ABERTA";
     }
 
+    // Uso normal: dá baixa no estoque da peça e registra o item
     public void adicionarPeca(Peca peca, int qtd) throws EstoqueInsuficienteException {
-        peca.baixarEstoque(qtd); 
-        itens.add(new ItemPeca(peca, qtd)); 
+        peca.baixarEstoque(qtd);
+        itens.add(new ItemPeca(peca, qtd));
+    }
+
+    // Uso ao carregar do banco: só registra o item, SEM mexer no estoque
+    public void carregarItem(Peca peca, int qtd) {
+        itens.add(new ItemPeca(peca, qtd));
     }
 
     public double calcularCustoPecas() {
@@ -46,19 +51,24 @@ public abstract class Manutencao implements Serializable {
 
     public abstract double calcularCusto();
     public abstract void exibirDetalhes();
+    // Texto gravado na coluna "tipo" do banco: CORRETIVA ou PREVENTIVA
+    public abstract String getTipo();
 
-
-    //Méotods Setters e Getters
-    public String getId() {
+    // Métodos Setters e Getters
+    public int getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(int id) {
         this.id = id;
     }
 
     public LocalDate getData() {
         return data;
+    }
+
+    public void setData(LocalDate data) {
+        this.data = data;
     }
 
     public String getDescricao() {
@@ -100,7 +110,7 @@ public abstract class Manutencao implements Serializable {
     public void setStatus(String status) {
         this.status = status;
     }
-    
+
     public List<ItemPeca> getItens() {
         return itens;
     }
