@@ -1,21 +1,24 @@
 package classes;
 
-import java.io.Serializable;
-
-public class Tecnico implements Serializable{
-    private String id;
+public class Tecnico {
+    private int id;
     private String nome;
-    private String especialidade;
     private String telefone;
     private boolean disponivel;
+    private TipoTecnico tipo;
 
-    // Construtor
-    public Tecnico(String id, String nome, String especialidade, String telefone) {
+    // Construtor para um técnico novo (nasce disponível)
+    public Tecnico(int id, String nome, String telefone, TipoTecnico tipo) {
+        this(id, nome, telefone, true, tipo);
+    }
+
+    // Construtor usado ao carregar do banco
+    public Tecnico(int id, String nome, String telefone, boolean disponivel, TipoTecnico tipo) {
         this.id = id;
         this.nome = nome;
-        this.especialidade = especialidade;
         this.telefone = telefone;
-        this.disponivel = true;   // todo técnico criado está inicialmente disponível
+        this.disponivel = disponivel;
+        this.tipo = tipo;
     }
 
     // Métodos de negócio
@@ -32,10 +35,10 @@ public class Tecnico implements Serializable{
     }
 
     // Getters e Setters
-    public String getId() {
+    public int getId() {
         return id;
     }
-    public void setId(String id) {
+    public void setId(int id) {
         this.id = id;
     }
 
@@ -44,13 +47,6 @@ public class Tecnico implements Serializable{
     }
     public void setNome(String nome) {
         this.nome = nome;
-    }
-
-    public String getEspecialidade() {
-        return especialidade;
-    }
-    public void setEspecialidade(String especialidade) {
-        this.especialidade = especialidade;
     }
 
     public String getTelefone() {
@@ -67,11 +63,28 @@ public class Tecnico implements Serializable{
         this.disponivel = disponivel;
     }
 
-    // toString pra facilitar listagem no console
+    public TipoTecnico getTipo() {
+        return tipo;
+    }
+    public void setTipo(TipoTecnico tipo) {
+        this.tipo = tipo;
+    }
+
+    // Atalhos que vêm do molde
+    public String getCargo() {
+        return tipo.getCargo();
+    }
+    public String getEspecialidade() {
+        return tipo.getEspecialidade();
+    }
+    public double getValorHora() {
+        return tipo.getValorHora();
+    }
+
     @Override
     public String toString() {
-        return String.format("[%s] %s | %s | Tel: %s | %s",
-                id, nome, especialidade, telefone,
+        return String.format("[%d] %s | %s | Tel: %s | %s",
+                id, nome, tipo.getEspecialidade(), telefone,
                 disponivel ? "DISPONÍVEL" : "OCUPADO");
     }
 }

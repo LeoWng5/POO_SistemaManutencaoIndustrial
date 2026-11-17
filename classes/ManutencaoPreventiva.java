@@ -6,7 +6,7 @@ public class ManutencaoPreventiva extends Manutencao {
     private int periodicidadeDias;
     private LocalDate proximaData;
 
-    public ManutencaoPreventiva(String id, String descricao, Maquina maquina, int periodicidadeDias) {
+    public ManutencaoPreventiva(int id, String descricao, Maquina maquina, int periodicidadeDias) {
         super(id, descricao, maquina);
         this.periodicidadeDias = periodicidadeDias;
         this.proximaData = LocalDate.now().plusDays(periodicidadeDias);
@@ -15,7 +15,13 @@ public class ManutencaoPreventiva extends Manutencao {
     @Override
     public double calcularCusto() {
         // Custo fixo da preventiva + o custo das peças
+        // (o cálculo dinâmico por hora do técnico é do Bloco 3)
         return 50.0 + calcularCustoPecas();
+    }
+
+    @Override
+    public String getTipo() {
+        return "PREVENTIVA";
     }
 
     @Override
@@ -27,16 +33,15 @@ public class ManutencaoPreventiva extends Manutencao {
         if (getTecnico() != null) {
             System.out.println("Técnico Responsável: " + getTecnico().getNome());
         }
-        
-        // NOVO: Listando as peças utilizadas
+
         System.out.println("--- Peças Utilizadas ---");
         if (getItens().isEmpty()) {
             System.out.println("Nenhuma peça utilizada.");
         } else {
             for (ItemPeca item : getItens()) {
-                System.out.printf("- %s | Qtd: %d | Subtotal: R$ %.2f\n", 
-                    item.getPeca().getNome(), 
-                    item.getQuantidade(), 
+                System.out.printf("- %s | Qtd: %d | Subtotal: R$ %.2f\n",
+                    item.getPeca().getNome(),
+                    item.getQuantidade(),
                     item.getSubtotal());
             }
         }
@@ -44,17 +49,17 @@ public class ManutencaoPreventiva extends Manutencao {
     }
 
     //Métodos Setter e Getters
-    public int getPeriodicidadeDias() { 
-        return periodicidadeDias; 
+    public int getPeriodicidadeDias() {
+        return periodicidadeDias;
     }
-    public void setPeriodicidadeDias(int periodicidadeDias) { 
-        this.periodicidadeDias = periodicidadeDias; 
+    public void setPeriodicidadeDias(int periodicidadeDias) {
+        this.periodicidadeDias = periodicidadeDias;
     }
 
-    public LocalDate getProximaData() { 
-        return proximaData; 
+    public LocalDate getProximaData() {
+        return proximaData;
     }
-    public void setProximaData(LocalDate proximaData) { 
-        this.proximaData = proximaData; 
+    public void setProximaData(LocalDate proximaData) {
+        this.proximaData = proximaData;
     }
 }

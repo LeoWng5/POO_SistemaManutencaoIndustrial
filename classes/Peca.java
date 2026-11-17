@@ -1,10 +1,9 @@
 package classes;
 
-import java.io.Serializable;
 import exception.EstoqueInsuficienteException;
 
-public class Peca implements Serializable{
-    private String id;
+public class Peca {
+    private int id;
     private String nome;
     private String descricao;
     private String categoria;        // "MECANICA", "ELETRICA", "LUBRIFICANTE", etc.
@@ -13,7 +12,7 @@ public class Peca implements Serializable{
     private double valorUnitario;
 
     // Construtor
-    public Peca(String id, String nome, String descricao, String categoria,
+    public Peca(int id, String nome, String descricao, String categoria,
                 int quantidadeEstoque, int estoqueMinimo, double valorUnitario) {
         this.id = id;
         this.nome = nome;
@@ -49,60 +48,60 @@ public class Peca implements Serializable{
     }
 
     // Getters e Setters
-    public String getId() {
-        return id; 
+    public int getId() {
+        return id;
     }
-    public void setId(String id){
-        this.id = id; 
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getNome() {
-        return nome; 
+        return nome;
     }
-    public void setNome(String nome) { 
-        this.nome = nome; 
-    }
-
-    public String getDescricao() { 
-        return descricao; 
-    }
-    public void setDescricao(String descricao) { 
-        this.descricao = descricao; 
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 
-    public String getCategoria() { 
-        return categoria; 
+    public String getDescricao() {
+        return descricao;
     }
-    public void setCategoria(String categoria) { 
-        this.categoria = categoria; 
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
     }
 
-    public int getQuantidadeEstoque() { 
-        return quantidadeEstoque; 
+    public String getCategoria() {
+        return categoria;
+    }
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    public int getQuantidadeEstoque() {
+        return quantidadeEstoque;
     }
     public void setQuantidadeEstoque(int quantidadeEstoque) {
         this.quantidadeEstoque = quantidadeEstoque;
     }
 
-    public int getEstoqueMinimo() { 
-        return estoqueMinimo; 
+    public int getEstoqueMinimo() {
+        return estoqueMinimo;
     }
     public void setEstoqueMinimo(int estoqueMinimo) {
         this.estoqueMinimo = estoqueMinimo;
     }
 
-    public double getValorUnitario() { 
-        return valorUnitario; 
+    public double getValorUnitario() {
+        return valorUnitario;
     }
     public void setValorUnitario(double valorUnitario) {
         this.valorUnitario = valorUnitario;
     }
 
-    // toString pra listagem no console
+    // toString pra listagem
     @Override
     public String toString() {
         String alerta = isEstoqueCritico() ? " ⚠ ESTOQUE CRÍTICO" : "";
-        return String.format("[%s] %s (%s) | Qtd: %d | R$ %.2f%s",
+        return String.format("[%d] %s (%s) | Qtd: %d | R$ %.2f%s",
                 id, nome, categoria, quantidadeEstoque, valorUnitario, alerta);
     }
 }

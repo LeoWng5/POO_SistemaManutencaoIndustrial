@@ -1,8 +1,6 @@
 package classes;
 
-import java.io.Serializable;
-
-public class ItemPeca implements Serializable{
+public class ItemPeca {
     private Peca peca;
     private int quantidade;
 
@@ -15,10 +13,10 @@ public class ItemPeca implements Serializable{
         return peca.getValorUnitario() * quantidade;
     }
 
-    public Peca getPeca() { 
-        return peca; 
+    public Peca getPeca() {
+        return peca;
     }
-    public int getQuantidade() { 
-        return quantidade; 
+    public int getQuantidade() {
+        return quantidade;
     }
 }
