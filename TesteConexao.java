@@ -5,7 +5,20 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-/** Teste rápido: cria o banco e lista as tabelas. Rode antes de mexer no resto. */
+/**
+ TesteConexao - verifica a integração do projeto com o banco SQLite.
+ 
+  O que faz:
+
+   1. Chama ConexaoDB.inicializar(), que cria o banco e as tabelas
+      a partir do arquivo schema.sql.
+   2. Consulta o banco e imprime o nome de cada tabela criada.
+ 
+  Resultado esperado: a mensagem "Banco OK" seguida de 10 tabelas.
+  Se aparecer "ERRO", confira se o sqlite-jdbc.jar está na pasta lib/
+  e se o schema.sql está na pasta raiz do projeto.
+ */
+
 public class TesteConexao {
     public static void main(String[] args) {
         try {
