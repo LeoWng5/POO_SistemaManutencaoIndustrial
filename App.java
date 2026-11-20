@@ -1,11 +1,12 @@
 import classes.*;
 import exception.*;
-import service.*;
+import service.*;                     
 import service.SistemaService;
 
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.plaf.basic.BasicButtonUI;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -18,25 +19,61 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Interface Gráfica 2.0 — Dashboard estilo ERP / Office Ribbon.
+ * Interface Gráfica 2.0 — Dashboard estilo ERP / Office Ribbon, com Modo Escuro.
  * Apenas camada de visualização: todo o backend (Service/DAO) é reaproveitado.
  */
 public class App extends JFrame {
 
     // ============================================================
-    // PALETA E FONTES (identidade visual "Office/ERP")
+    // PALETA (mutável para suportar Modo Escuro)
     // ============================================================
-    static final Color BG_APP    = new Color(0xF4F6F9);
-    static final Color BG_CARD   = Color.WHITE;
-    static final Color PRIMARY   = new Color(0x1E5F9E);
-    static final Color PRIMARY_D = new Color(0x154975);
-    static final Color ACCENT    = new Color(0xE67E22);
-    static final Color DANGER    = new Color(0xE74C3C);
-    static final Color SUCCESS   = new Color(0x27AE60);
-    static final Color TEXT      = new Color(0x2C3E50);
-    static final Color MUTED     = new Color(0x95A5A6);
-    static final Color BORDER    = new Color(0xDDE2E8);
-    static final Color TAB_BG    = new Color(0xEDF1F6);
+    static boolean darkMode = false;
+
+    static Color BG_APP, BG_CARD, PRIMARY, PRIMARY_D, ACCENT, DANGER, SUCCESS, TEXT, MUTED, BORDER, TAB_BG;
+
+    static {
+        aplicarCores(false);
+    }
+
+    private static void aplicarCores(boolean dark) {
+        if (dark) {
+            BG_APP    = new Color(0x121212);
+            BG_CARD   = new Color(0x1E1E1E);
+            TEXT      = new Color(0xF1F1F1);
+            MUTED     = new Color(0xA0A0A0);
+            BORDER    = new Color(0x333333);
+            TAB_BG    = new Color(0x2D2D2D);
+            PRIMARY   = new Color(0x007ACC);
+            PRIMARY_D = new Color(0x005A9E);
+        } else {
+            BG_APP    = new Color(0xF4F6F9);
+            BG_CARD   = Color.WHITE;
+            TEXT      = new Color(0x2C3E50);
+            MUTED     = new Color(0x95A5A6);
+            BORDER    = new Color(0xDDE2E8);
+            TAB_BG    = new Color(0xEDF1F6);
+            PRIMARY   = new Color(0x1E5F9E);
+            PRIMARY_D = new Color(0x154975);
+        }
+        ACCENT  = new Color(0xE67E22);
+        DANGER  = new Color(0xE74C3C);
+        SUCCESS = new Color(0x27AE60);
+    }
+
+    /** Faz o JOptionPane, labels e campos criados DEPOIS do login respeitarem o modo escuro. */
+    private static void aplicarTemaGlobal() {
+        if (!darkMode) return;
+        UIManager.put("OptionPane.background", BG_CARD);
+        UIManager.put("OptionPane.messageForeground", TEXT);
+        UIManager.put("Panel.background", BG_CARD);
+        UIManager.put("Label.foreground", TEXT);
+        UIManager.put("TextField.background", BG_APP);
+        UIManager.put("TextField.foreground", TEXT);
+        UIManager.put("TextField.caretForeground", TEXT);
+        UIManager.put("ComboBox.background", BG_APP);
+        UIManager.put("ComboBox.foreground", TEXT);
+        UIManager.put("ScrollPane.background", BG_CARD);
+    }
 
     static final Font F_TITLE = new Font("Segoe UI", Font.BOLD, 22);
     static final Font F_SUBT  = new Font("Segoe UI", Font.BOLD, 13);
@@ -81,6 +118,8 @@ public class App extends JFrame {
             return;
         }
 
+        aplicarTemaGlobal();   // depois do login, antes de criar a interface principal
+
         setTitle("🏭 Gestão de Manutenção Industrial — v2.0");
         setSize(1366, 820);
         setMinimumSize(new Dimension(1150, 700));
@@ -98,17 +137,68 @@ public class App extends JFrame {
     }
 
     // ============================================================
-    // LOGIN (RBAC)
+    // HELPER DE BOTÃO (cores funcionam em qualquer Look and Feel)
+    // ============================================================
+    private void estilizarBotao(JButton b, Color bg, Color fg) {
+        if (b.getUI().getClass() != BasicButtonUI.class) {
+            b.setUI(new BasicButtonUI());      // ignora o LAF nativo, que apaga cores e texto
+        }
+        b.setContentAreaFilled(false);
+        b.setOpaque(true);
+        b.setFocusPainted(false);
+        b.setBackground(bg);
+        b.setForeground(fg);
+        b.setBorder(new CompoundBorder(
+                new LineBorder(BORDER, 1, true),
+                new EmptyBorder(6, 14, 6, 14)));
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
+    // ============================================================
+    // LOGIN (RBAC + alternância de tema)
     // ============================================================
     private boolean fazerLogin() {
         JDialog dlg = new JDialog((Frame) null, "Acesso ao Sistema", true);
-        dlg.setSize(420, 360);
+        dlg.setSize(420, 410);
         dlg.setLocationRelativeTo(null);
         dlg.setLayout(new BorderLayout());
-        dlg.getContentPane().setBackground(BG_CARD);
 
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(PRIMARY);
+        JPanel form = new JPanel(new GridBagLayout());
+        JPanel footer = new JPanel(new BorderLayout());
+        JLabel[] labels = new JLabel[2];
+        JTextField txtUser = new JTextField();
+        JPasswordField txtPass = new JPasswordField();
+        JCheckBox chkDark = new JCheckBox("Modo Escuro");
+        JButton btnSair = new JButton("Sair");
+        JButton btnEntrar = new JButton("Entrar");
+        JLabel lblErro = new JLabel(" ");
+
+        Runnable temaLogin = () -> {
+            aplicarCores(darkMode);
+            dlg.getContentPane().setBackground(BG_CARD);
+            header.setBackground(PRIMARY);
+            form.setBackground(BG_CARD);
+            footer.setBackground(BG_CARD);
+
+            txtUser.setBackground(BG_APP); txtUser.setForeground(TEXT); txtUser.setCaretColor(TEXT);
+            txtPass.setBackground(BG_APP); txtPass.setForeground(TEXT); txtPass.setCaretColor(TEXT);
+            txtUser.setBorder(new CompoundBorder(new LineBorder(BORDER, 1), new EmptyBorder(4, 6, 4, 6)));
+            txtPass.setBorder(new CompoundBorder(new LineBorder(BORDER, 1), new EmptyBorder(4, 6, 4, 6)));
+
+            for (JLabel l : labels) l.setForeground(TEXT);
+            lblErro.setForeground(DANGER);
+            chkDark.setBackground(BG_CARD);
+            chkDark.setForeground(TEXT);
+
+            estilizarBotao(btnSair, BG_APP, TEXT);
+            estilizarBotao(btnEntrar, PRIMARY, Color.WHITE);
+            btnEntrar.setFont(F_SUBT);
+
+            dlg.getContentPane().repaint();
+        };
+
+        // Header
         header.setPreferredSize(new Dimension(0, 90));
         JLabel t = new JLabel("GESTÃO DE MANUTENÇÃO", SwingConstants.CENTER);
         t.setForeground(Color.WHITE);
@@ -119,45 +209,47 @@ public class App extends JFrame {
         header.add(t, BorderLayout.CENTER);
         header.add(sub, BorderLayout.SOUTH);
 
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(BG_CARD);
+        // Form
         form.setBorder(new EmptyBorder(20, 32, 10, 32));
         GridBagConstraints g = new GridBagConstraints();
         g.fill = GridBagConstraints.HORIZONTAL;
         g.insets = new Insets(4, 0, 4, 0);
         g.weightx = 1; g.gridx = 0;
 
-        g.gridy = 0; form.add(new JLabel("Usuário"), g);
-        JTextField txtUser = new JTextField();
-        g.gridy = 1; form.add(txtUser, g);
-
-        g.gridy = 2; form.add(new JLabel("Senha"), g);
-        JPasswordField txtPass = new JPasswordField();
-        g.gridy = 3; form.add(txtPass, g);
-
-        JLabel lblErro = new JLabel(" ");
-        lblErro.setForeground(DANGER);
+        labels[0] = new JLabel("Usuário");
+        labels[1] = new JLabel("Senha");
         lblErro.setFont(F_BODY);
+
+        g.gridy = 0; form.add(labels[0], g);
+        g.gridy = 1; form.add(txtUser, g);
+        g.gridy = 2; form.add(labels[1], g);
+        g.gridy = 3; form.add(txtPass, g);
         g.gridy = 4; form.add(lblErro, g);
 
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 12));
-        footer.setBackground(BG_CARD);
-        JButton btnSair = new JButton("Sair");
-        JButton btnEntrar = new JButton("Entrar");
-        btnEntrar.setBackground(PRIMARY);
-        btnEntrar.setForeground(Color.WHITE);
-        btnEntrar.setFocusPainted(false);
-        footer.add(btnSair);
-        footer.add(btnEntrar);
+        // Footer: checkbox à esquerda, botões à direita
+        chkDark.setFont(F_BODY);
+        chkDark.setFocusPainted(false);
+        chkDark.addActionListener(e -> {
+            darkMode = chkDark.isSelected();
+            temaLogin.run();
+        });
+
+        JPanel pnlBotoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        pnlBotoes.setOpaque(false);
+        pnlBotoes.add(btnSair);
+        pnlBotoes.add(btnEntrar);
+
+        footer.setBorder(new EmptyBorder(10, 20, 15, 20));
+        footer.add(chkDark, BorderLayout.WEST);
+        footer.add(pnlBotoes, BorderLayout.EAST);
 
         final boolean[] ok = {false};
-
         Runnable tentar = () -> {
             String u = txtUser.getText().trim();
             String s = new String(txtPass.getPassword());
             if (u.isEmpty() || s.isEmpty()) { lblErro.setText("Informe usuário e senha."); return; }
             try {
-                service.realizarLogin(u, s);   // [ADAPTE] se retornar boolean, cheque aqui
+                service.realizarLogin(u, s);
                 ok[0] = true;
                 dlg.dispose();
             } catch (Exception ex) {
@@ -171,6 +263,8 @@ public class App extends JFrame {
         dlg.add(header, BorderLayout.NORTH);
         dlg.add(form, BorderLayout.CENTER);
         dlg.add(footer, BorderLayout.SOUTH);
+
+        temaLogin.run();   // cores iniciais
         dlg.setVisible(true);
         return ok[0];
     }
@@ -186,14 +280,12 @@ public class App extends JFrame {
     private JPanel buildRibbon() {
         JPanel ribbon = new JPanel();
         ribbon.setLayout(new BoxLayout(ribbon, BoxLayout.Y_AXIS));
-        ribbon.setBackground(Color.WHITE);
+        ribbon.setBackground(BG_CARD);
         ribbon.setBorder(new MatteBorder(0, 0, 1, 0, BORDER));
 
-        // faixa de abas
         JPanel tabStrip = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         tabStrip.setBackground(TAB_BG);
 
-        // área de botões (CardLayout)
         JPanel btnArea = new JPanel(new CardLayout());
         btnArea.setBackground(BG_CARD);
         btnArea.setPreferredSize(new Dimension(0, 92));
@@ -204,11 +296,9 @@ public class App extends JFrame {
         for (int i = 0; i < tabs.length; i++) {
             final String nome = tabs[i];
             JButton tb = new JButton(nome);
+            estilizarBotao(tb, TAB_BG, TEXT);
             tb.setFont(F_SUBT);
-            tb.setFocusPainted(false);
             tb.setBorder(new EmptyBorder(8, 18, 8, 18));
-            tb.setBackground(TAB_BG);
-            tb.setForeground(TEXT);
             tabBtns[i] = tb;
             tabStrip.add(tb);
 
@@ -220,14 +310,14 @@ public class App extends JFrame {
                     x.setBackground(TAB_BG);
                     x.setForeground(TEXT);
                 }
-                tb.setBackground(Color.WHITE);
+                tb.setBackground(BG_CARD);
                 tb.setForeground(PRIMARY);
                 if (nome.equals("Início") && cardCentral != null) {
                     cardCentral.show(painelCentral, "DASH");
                 }
             });
         }
-        tabBtns[0].setBackground(Color.WHITE);
+        tabBtns[0].setBackground(BG_CARD);
         tabBtns[0].setForeground(PRIMARY);
 
         ribbon.add(tabStrip);
@@ -284,17 +374,15 @@ public class App extends JFrame {
 
     private JButton ribbonBtn(String text, ActionListener a) {
         JButton b = new JButton(text);
+        estilizarBotao(b, BG_CARD, TEXT);
         b.setFont(F_BODY);
-        b.setFocusPainted(false);
-        b.setBackground(Color.WHITE);
         b.setBorder(new CompoundBorder(
             new LineBorder(BORDER, 1, true),
             new EmptyBorder(10, 14, 10, 14)));
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.addActionListener(a);
         b.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { b.setBackground(new Color(0xEEF3F9)); }
-            public void mouseExited(MouseEvent e) { b.setBackground(Color.WHITE); }
+            public void mouseEntered(MouseEvent e) { b.setBackground(TAB_BG); }
+            public void mouseExited(MouseEvent e) { b.setBackground(BG_CARD); }
         });
         return b;
     }
@@ -371,9 +459,7 @@ public class App extends JFrame {
             JLabel lpInfo = new JLabel("Veja quais equipamentos estão mais próximos da falha.");
             lpInfo.setFont(F_BODY); lpInfo.setForeground(TEXT);
             JButton btnVer = new JButton("Abrir Lista →");
-            btnVer.setBackground(PRIMARY);
-            btnVer.setForeground(Color.WHITE);
-            btnVer.setFocusPainted(false);
+            estilizarBotao(btnVer, PRIMARY, Color.WHITE);
             btnVer.addActionListener(e -> cardCentral.show(painelCentral, "PREDITIVA"));
             predCard.add(lp, BorderLayout.NORTH);
             predCard.add(lpInfo, BorderLayout.CENTER);
@@ -555,7 +641,7 @@ public class App extends JFrame {
         JProgressBar pb = new JProgressBar(0, 100);
         pb.setValue((int) Math.max(0, Math.min(100, saude)));
         pb.setForeground(cor);
-        pb.setBackground(new Color(0xEEEEEE));
+        pb.setBackground(BORDER);
         pb.setStringPainted(true);
         pb.setString(String.format("%.0f%% de saúde", saude));
         pb.setBorderPainted(false);
@@ -584,13 +670,14 @@ public class App extends JFrame {
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.setFont(F_SUBT);
+        tabs.setBackground(BG_CARD);
+        tabs.setForeground(TEXT);
 
         modeloMaquinas = new DefaultTableModel(
                 new String[]{"ID", "Nº Série", "Tipo", "Fabricante", "Status", "Saúde (%)"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable tabMaq = new JTable(modeloMaquinas);
-        tabMaq.setRowHeight(24);
+        JTable tabMaq = criarTabela(modeloMaquinas);
         tabMaq.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
@@ -606,14 +693,13 @@ public class App extends JFrame {
                 }
             }
         });
-        tabs.addTab("Máquinas", new JScrollPane(tabMaq));
+        tabs.addTab("Máquinas", criarScroll(tabMaq));
 
         modeloTecnicos = new DefaultTableModel(
                 new String[]{"ID", "Nome", "Especialidade", "Telefone", "Status"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable tabTec = new JTable(modeloTecnicos);
-        tabTec.setRowHeight(24);
+        JTable tabTec = criarTabela(modeloTecnicos);
         tabTec.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
@@ -629,26 +715,45 @@ public class App extends JFrame {
                 }
             }
         });
-        tabs.addTab("Técnicos", new JScrollPane(tabTec));
+        tabs.addTab("Técnicos", criarScroll(tabTec));
 
         modeloPecas = new DefaultTableModel(
                 new String[]{"ID", "Nome", "Categoria", "Qtd. Estoque", "Valor Unit. (R$)"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable tabPec = new JTable(modeloPecas);
-        tabPec.setRowHeight(24);
-        tabs.addTab("Estoque de Peças", new JScrollPane(tabPec));
+        JTable tabPec = criarTabela(modeloPecas);
+        tabs.addTab("Estoque de Peças", criarScroll(tabPec));
 
         modeloManutencoes = new DefaultTableModel(
                 new String[]{"ID", "Tipo", "Máquina", "Técnico", "Status", "Custo (R$)"}, 0) {
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable tabMan = new JTable(modeloManutencoes);
-        tabMan.setRowHeight(24);
-        tabs.addTab("Manutenções", new JScrollPane(tabMan));
+        JTable tabMan = criarTabela(modeloManutencoes);
+        tabs.addTab("Manutenções", criarScroll(tabMan));
 
         p.add(tabs, BorderLayout.CENTER);
         return p;
+    }
+
+    private JTable criarTabela(DefaultTableModel modelo) {
+        JTable table = new JTable(modelo);
+        table.setRowHeight(24);
+        table.setBackground(BG_CARD);
+        table.setForeground(TEXT);
+        table.setGridColor(BORDER);
+        table.setSelectionBackground(PRIMARY);
+        table.setSelectionForeground(Color.WHITE);
+        table.getTableHeader().setBackground(TAB_BG);
+        table.getTableHeader().setForeground(TEXT);
+        table.getTableHeader().setFont(F_SUBT);
+        return table;
+    }
+
+    private JScrollPane criarScroll(JTable table) {
+        JScrollPane sp = new JScrollPane(table);
+        sp.getViewport().setBackground(BG_CARD);
+        sp.setBorder(new LineBorder(BORDER, 1));
+        return sp;
     }
 
     // ============================================================
@@ -703,7 +808,7 @@ public class App extends JFrame {
     // ============================================================
     private JPanel buildStatusBar() {
         JPanel bar = new JPanel(new BorderLayout());
-        bar.setBackground(new Color(0xF0F3F7));
+        bar.setBackground(TAB_BG);
         bar.setBorder(new CompoundBorder(
                 new MatteBorder(1, 0, 0, 0, BORDER),
                 new EmptyBorder(6, 16, 6, 16)));
@@ -760,6 +865,20 @@ public class App extends JFrame {
         return null;
     }
 
+    /** Cria um JLabel já com a cor de texto do tema. */
+    private JLabel lbl(String texto) {
+        JLabel l = new JLabel(texto);
+        l.setForeground(TEXT);
+        return l;
+    }
+
+    /** Aplica cores do tema em campos de texto. */
+    private void estilizarCampo(JTextField f) {
+        f.setBackground(BG_APP);
+        f.setForeground(TEXT);
+        f.setCaretColor(TEXT);
+    }
+
     // ============================================================
     // DETALHES (miniaturas)
     // ============================================================
@@ -772,20 +891,21 @@ public class App extends JFrame {
         JPanel info = new JPanel(new GridLayout(0, 2, 8, 6));
         info.setBackground(BG_CARD);
         info.setBorder(new EmptyBorder(16, 16, 16, 16));
-        info.add(new JLabel("ID:"));        info.add(new JLabel(String.valueOf(m.getId())));
-        info.add(new JLabel("Tipo:"));      info.add(new JLabel(m.getNome()));
-        info.add(new JLabel("S/N:"));       info.add(new JLabel(m.getNumeroSerie()));
-        info.add(new JLabel("Fabricante:"));info.add(new JLabel(m.getFabricante()));
-        info.add(new JLabel("Status:"));    info.add(new JLabel(m.getStatus()));
-        info.add(new JLabel("Saúde:"));     info.add(new JLabel(String.format("%.0f%%", m.getSaudeEquipamento())));
+        info.add(lbl("ID:"));         info.add(lbl(String.valueOf(m.getId())));
+        info.add(lbl("Tipo:"));       info.add(lbl(m.getNome()));
+        info.add(lbl("S/N:"));        info.add(lbl(m.getNumeroSerie()));
+        info.add(lbl("Fabricante:")); info.add(lbl(m.getFabricante()));
+        info.add(lbl("Status:"));     info.add(lbl(m.getStatus()));
+        info.add(lbl("Saúde:"));      info.add(lbl(String.format("%.0f%%", m.getSaudeEquipamento())));
 
         JLabel foto = new JLabel("Sem foto", SwingConstants.CENTER);
+        foto.setForeground(MUTED);
         foto.setPreferredSize(new Dimension(240, 180));
         foto.setBorder(new LineBorder(BORDER, 1, true));
         foto.setOpaque(true);
-        foto.setBackground(new Color(0xF5F7FA));
+        foto.setBackground(TAB_BG);
         try {
-            String path = m.getFoto(); // [ADAPTE] se o getter tiver outro nome
+            String path = m.getFoto();
             ImageIcon ic = carregarMiniatura(path, 240, 180);
             if (ic != null) { foto.setIcon(ic); foto.setText(""); }
         } catch (Throwable ignore) {}
@@ -804,19 +924,20 @@ public class App extends JFrame {
         JPanel info = new JPanel(new GridLayout(0, 2, 8, 6));
         info.setBackground(BG_CARD);
         info.setBorder(new EmptyBorder(16, 16, 16, 16));
-        info.add(new JLabel("ID:"));           info.add(new JLabel(String.valueOf(t.getId())));
-        info.add(new JLabel("Nome:"));         info.add(new JLabel(t.getNome()));
-        info.add(new JLabel("Especialidade:"));info.add(new JLabel(t.getEspecialidade()));
-        info.add(new JLabel("Telefone:"));     info.add(new JLabel(t.getTelefone()));
-        info.add(new JLabel("Disponível:"));   info.add(new JLabel(t.isDisponivel() ? "Sim" : "Não"));
+        info.add(lbl("ID:"));            info.add(lbl(String.valueOf(t.getId())));
+        info.add(lbl("Nome:"));          info.add(lbl(t.getNome()));
+        info.add(lbl("Especialidade:")); info.add(lbl(t.getEspecialidade()));
+        info.add(lbl("Telefone:"));      info.add(lbl(t.getTelefone()));
+        info.add(lbl("Disponível:"));    info.add(lbl(t.isDisponivel() ? "Sim" : "Não"));
 
         JLabel foto = new JLabel("Sem foto", SwingConstants.CENTER);
+        foto.setForeground(MUTED);
         foto.setPreferredSize(new Dimension(240, 180));
         foto.setBorder(new LineBorder(BORDER, 1, true));
         foto.setOpaque(true);
-        foto.setBackground(new Color(0xF5F7FA));
+        foto.setBackground(TAB_BG);
         try {
-            String path = t.getFoto(); // [ADAPTE]
+            String path = t.getFoto();
             ImageIcon ic = carregarMiniatura(path, 240, 180);
             if (ic != null) { foto.setIcon(ic); foto.setText(""); }
         } catch (Throwable ignore) {}
@@ -851,7 +972,7 @@ public class App extends JFrame {
         } catch (RuntimeException e) { mostrarErro(e); }
     }
 
-    /** Formulário moderno de Máquina com JFileChooser e preview. */
+    /** Formulário de Máquina com JFileChooser e preview. */
     private void cadastrarMaquina() {
         try {
             List<TipoMaquina> tipos = service.getTiposMaquina();
@@ -874,23 +995,27 @@ public class App extends JFrame {
             g.insets = new Insets(6, 4, 6, 4);
             g.weightx = 1; g.gridx = 0;
 
-            g.gridy = 0; form.add(new JLabel("Tipo de Máquina:"), g);
+            g.gridy = 0; form.add(lbl("Tipo de Máquina:"), g);
             JComboBox<TipoMaquina> cbTipo = new JComboBox<>(tipos.toArray(new TipoMaquina[0]));
+            cbTipo.setBackground(BG_APP); cbTipo.setForeground(TEXT);
             g.gridy = 1; form.add(cbTipo, g);
 
-            g.gridy = 2; form.add(new JLabel("Número de Série:"), g);
+            g.gridy = 2; form.add(lbl("Número de Série:"), g);
             JTextField txtSerie = new JTextField();
+            estilizarCampo(txtSerie);
             g.gridy = 3; form.add(txtSerie, g);
 
-            g.gridy = 4; form.add(new JLabel("Foto (opcional):"), g);
+            g.gridy = 4; form.add(lbl("Foto (opcional):"), g);
             JPanel fotoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
             fotoPanel.setBackground(BG_CARD);
             JLabel preview = new JLabel("Sem foto", SwingConstants.CENTER);
+            preview.setForeground(MUTED);
             preview.setPreferredSize(new Dimension(160, 100));
             preview.setBorder(new LineBorder(BORDER, 1, true));
             preview.setOpaque(true);
-            preview.setBackground(new Color(0xF5F7FA));
+            preview.setBackground(TAB_BG);
             JButton btnFoto = new JButton("Escolher...");
+            estilizarBotao(btnFoto, BG_APP, TEXT);
             final String[] fotoPath = {null};
             btnFoto.addActionListener(e -> {
                 String p = escolherFoto(dlg);
@@ -907,10 +1032,9 @@ public class App extends JFrame {
             JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
             botoes.setBackground(BG_CARD);
             JButton btnCancelar = new JButton("Cancelar");
+            estilizarBotao(btnCancelar, BG_APP, TEXT);
             JButton btnSalvar = new JButton("Salvar");
-            btnSalvar.setBackground(PRIMARY);
-            btnSalvar.setForeground(Color.WHITE);
-            btnSalvar.setFocusPainted(false);
+            estilizarBotao(btnSalvar, PRIMARY, Color.WHITE);
             botoes.add(btnCancelar);
             botoes.add(btnSalvar);
 
@@ -928,13 +1052,13 @@ public class App extends JFrame {
                 } catch (RuntimeException ex) { mostrarErro(ex); }
             });
 
-            dlg.add(new JScrollPane(form), BorderLayout.CENTER);
+            dlg.add(criarScrollForm(form), BorderLayout.CENTER);
             dlg.add(botoes, BorderLayout.SOUTH);
             dlg.setVisible(true);
         } catch (RuntimeException e) { mostrarErro(e); }
     }
 
-    /** Formulário moderno de Técnico com foto. */
+    /** Formulário de Técnico com foto. */
     private void cadastrarTecnico() {
         try {
             List<TipoTecnico> tipos = service.getTiposTecnico();
@@ -957,27 +1081,32 @@ public class App extends JFrame {
             g.insets = new Insets(6, 4, 6, 4);
             g.weightx = 1; g.gridx = 0;
 
-            g.gridy = 0; form.add(new JLabel("Especialidade:"), g);
+            g.gridy = 0; form.add(lbl("Especialidade:"), g);
             JComboBox<TipoTecnico> cbTipo = new JComboBox<>(tipos.toArray(new TipoTecnico[0]));
+            cbTipo.setBackground(BG_APP); cbTipo.setForeground(TEXT);
             g.gridy = 1; form.add(cbTipo, g);
 
-            g.gridy = 2; form.add(new JLabel("Nome:"), g);
+            g.gridy = 2; form.add(lbl("Nome:"), g);
             JTextField txtNome = new JTextField();
+            estilizarCampo(txtNome);
             g.gridy = 3; form.add(txtNome, g);
 
-            g.gridy = 4; form.add(new JLabel("Telefone:"), g);
+            g.gridy = 4; form.add(lbl("Telefone:"), g);
             JTextField txtTel = new JTextField();
+            estilizarCampo(txtTel);
             g.gridy = 5; form.add(txtTel, g);
 
-            g.gridy = 6; form.add(new JLabel("Foto (opcional):"), g);
+            g.gridy = 6; form.add(lbl("Foto (opcional):"), g);
             JPanel fotoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
             fotoPanel.setBackground(BG_CARD);
             JLabel preview = new JLabel("Sem foto", SwingConstants.CENTER);
+            preview.setForeground(MUTED);
             preview.setPreferredSize(new Dimension(160, 100));
             preview.setBorder(new LineBorder(BORDER, 1, true));
             preview.setOpaque(true);
-            preview.setBackground(new Color(0xF5F7FA));
+            preview.setBackground(TAB_BG);
             JButton btnFoto = new JButton("Escolher...");
+            estilizarBotao(btnFoto, BG_APP, TEXT);
             final String[] fotoPath = {null};
             btnFoto.addActionListener(e -> {
                 String p = escolherFoto(dlg);
@@ -994,10 +1123,9 @@ public class App extends JFrame {
             JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
             botoes.setBackground(BG_CARD);
             JButton btnCancelar = new JButton("Cancelar");
+            estilizarBotao(btnCancelar, BG_APP, TEXT);
             JButton btnSalvar = new JButton("Salvar");
-            btnSalvar.setBackground(PRIMARY);
-            btnSalvar.setForeground(Color.WHITE);
-            btnSalvar.setFocusPainted(false);
+            estilizarBotao(btnSalvar, PRIMARY, Color.WHITE);
             botoes.add(btnCancelar);
             botoes.add(btnSalvar);
 
@@ -1014,10 +1142,17 @@ public class App extends JFrame {
                 } catch (RuntimeException ex) { mostrarErro(ex); }
             });
 
-            dlg.add(new JScrollPane(form), BorderLayout.CENTER);
+            dlg.add(criarScrollForm(form), BorderLayout.CENTER);
             dlg.add(botoes, BorderLayout.SOUTH);
             dlg.setVisible(true);
         } catch (RuntimeException e) { mostrarErro(e); }
+    }
+
+    private JScrollPane criarScrollForm(JPanel form) {
+        JScrollPane sp = new JScrollPane(form);
+        sp.setBorder(null);
+        sp.getViewport().setBackground(BG_CARD);
+        return sp;
     }
 
     private void cadastrarPeca() {
@@ -1141,6 +1276,18 @@ public class App extends JFrame {
     // ============================================================
     // RELATÓRIOS
     // ============================================================
+    private JScrollPane areaTexto(String texto, int w, int h) {
+        JTextArea ta = new JTextArea(texto);
+        ta.setEditable(false);
+        ta.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        ta.setBackground(BG_CARD);
+        ta.setForeground(TEXT);
+        ta.setCaretPosition(0);
+        JScrollPane sp = new JScrollPane(ta);
+        sp.setPreferredSize(new Dimension(w, h));
+        return sp;
+    }
+
     private void abrirRelatorioCusto() {
         StringBuilder sb = new StringBuilder("RELATÓRIO DE CUSTO ACUMULADO\n\n");
         double total = 0;
@@ -1155,12 +1302,8 @@ public class App extends JFrame {
         sb.append("\n──────────────────────────────\n");
         sb.append(String.format("TOTAL ACUMULADO:   R$ %,.2f%n", total));
 
-        JTextArea ta = new JTextArea(sb.toString());
-        ta.setEditable(false);
-        ta.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        JScrollPane sp = new JScrollPane(ta);
-        sp.setPreferredSize(new Dimension(600, 400));
-        JOptionPane.showMessageDialog(this, sp, "Relatório de Custo", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, areaTexto(sb.toString(), 600, 400),
+                "Relatório de Custo", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void abrirRelatorioHistorico() {
@@ -1174,12 +1317,8 @@ public class App extends JFrame {
             }
         } catch (Exception e) { mostrarErro(e); return; }
 
-        JTextArea ta = new JTextArea(sb.toString());
-        ta.setEditable(false);
-        ta.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        JScrollPane sp = new JScrollPane(ta);
-        sp.setPreferredSize(new Dimension(780, 420));
-        JOptionPane.showMessageDialog(this, sp, "Histórico de Manutenções", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, areaTexto(sb.toString(), 780, 420),
+                "Histórico de Manutenções", JOptionPane.INFORMATION_MESSAGE);
     }
 
     // ============================================================
@@ -1192,7 +1331,8 @@ public class App extends JFrame {
           + "NOVO LAYOUT:\n"
           + "• Barra superior com abas (Início / Cadastros / Manutenção / Estoque / Administração)\n"
           + "• Dashboard com gráficos e custo acumulado\n"
-          + "• Tela 'Preditiva' ordena equipamentos por saúde\n\n"
+          + "• Tela 'Preditiva' ordena equipamentos por saúde\n"
+          + "• Modo Escuro: marque a opção na tela de login\n\n"
           + "FLUXO RECOMENDADO:\n"
           + "1) Cadastros → Tipo de Máquina / Tipo de Técnico\n"
           + "2) Cadastros → Máquina / Técnico / Peça  (com foto)\n"
@@ -1203,13 +1343,8 @@ public class App extends JFrame {
           + "PERFIL OPERADOR: pode cadastrar, mas não exclui.\n"
           + "PERFIL ADM: acesso completo.";
 
-        JTextArea ta = new JTextArea(texto);
-        ta.setEditable(false);
-        ta.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        ta.setCaretPosition(0);
-        JScrollPane sp = new JScrollPane(ta);
-        sp.setPreferredSize(new Dimension(620, 460));
-        JOptionPane.showMessageDialog(this, sp, "Tutorial", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, areaTexto(texto, 620, 460),
+                "Tutorial", JOptionPane.INFORMATION_MESSAGE);
     }
 
     // ============================================================
