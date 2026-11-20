@@ -9,43 +9,40 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Comandos SQL da tabela tecnico. */
 public class TecnicoDAO {
-
     private final TipoTecnicoDAO tipoDAO = new TipoTecnicoDAO();
 
     public void inserir(Connection conn, Tecnico t) throws SQLException {
-        String sql = "INSERT INTO tecnico (nome, telefone, disponivel, tipo_tecnico_id) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO tecnico (nome, telefone, url_foto, disponivel, tipo_tecnico_id) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, t.getNome());
             ps.setString(2, t.getTelefone());
-            ps.setInt(3, t.isDisponivel() ? 1 : 0);
-            ps.setInt(4, t.getTipo().getId());
+            ps.setString(3, t.getFoto()); 
+            ps.setInt(4, t.isDisponivel() ? 1 : 0);
+            ps.setInt(5, t.getTipo().getId());
             ps.executeUpdate();
         }
         t.setId(SqlUtil.ultimoId(conn));
     }
 
     public Tecnico buscarPorId(Connection conn, int id) throws SQLException {
-        String sql = "SELECT nome, telefone, disponivel, tipo_tecnico_id FROM tecnico WHERE id = ?";
-        String nome;
-        String telefone;
+        String sql = "SELECT nome, telefone, url_foto, disponivel, tipo_tecnico_id FROM tecnico WHERE id = ?";
+        String nome, telefone, foto;
         boolean disponivel;
         int tipoId;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return null;
-                }
+                if (!rs.next()) return null;
                 nome = rs.getString("nome");
                 telefone = rs.getString("telefone");
+                foto = rs.getString("url_foto"); // <-- AQUI
                 disponivel = rs.getInt("disponivel") == 1;
                 tipoId = rs.getInt("tipo_tecnico_id");
             }
         }
         TipoTecnico tipo = tipoDAO.buscarPorId(conn, tipoId);
-        return new Tecnico(id, nome, telefone, disponivel, tipo);
+        return new Tecnico(id, nome, telefone, disponivel, tipo, foto);
     }
 
     public List<Tecnico> listar(Connection conn) throws SQLException {
@@ -57,13 +54,14 @@ public class TecnicoDAO {
     }
 
     public void atualizar(Connection conn, Tecnico t) throws SQLException {
-        String sql = "UPDATE tecnico SET nome = ?, telefone = ?, disponivel = ?, tipo_tecnico_id = ? WHERE id = ?";
+        String sql = "UPDATE tecnico SET nome = ?, telefone = ?, url_foto = ?, disponivel = ?, tipo_tecnico_id = ? WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, t.getNome());
             ps.setString(2, t.getTelefone());
-            ps.setInt(3, t.isDisponivel() ? 1 : 0);
-            ps.setInt(4, t.getTipo().getId());
-            ps.setInt(5, t.getId());
+            ps.setString(3, t.getFoto());
+            ps.setInt(4, t.isDisponivel() ? 1 : 0);
+            ps.setInt(5, t.getTipo().getId());
+            ps.setInt(6, t.getId());
             ps.executeUpdate();
         }
     }
@@ -81,5 +79,18 @@ public class TecnicoDAO {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         }
+    }
+
+    public int contarPorDisponibilidade(Connection conn, boolean disponivel) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM tecnico WHERE disponivel = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, disponivel ? 1 : 0);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
     }
 }

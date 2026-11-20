@@ -18,6 +18,7 @@ public class SistemaService {
     private PecaDAO pecaDAO = new PecaDAO();
     private FalhaDAO falhaDAO = new FalhaDAO();
     private ManutencaoDAO manutencaoDAO = new ManutencaoDAO();
+    private UsuarioDAO usuarioDAO = new UsuarioDAO();
 
     public SistemaService() {
         try { 
@@ -192,6 +193,32 @@ public class SistemaService {
             return custoFinal;
         } catch (SQLException e) { 
             throw SqlUtil.traduzir(e); 
+        }
+    }
+
+    public int getTotalMaquinasPorStatus(String status) {
+        try (Connection c = ConexaoDB.getConexao()) {
+            // Faz um SELECT COUNT(*) FROM maquina WHERE status = ?
+            return maquinaDAO.contarPorStatus(c, status);
+        } catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public int getTotalTecnicosPorDisponibilidade(boolean disponivel) {
+    try (Connection c = ConexaoDB.getConexao()) {
+        return tecnicoDAO.contarPorDisponibilidade(c, disponivel);
+    } catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public boolean realizarLogin(String usuario, String senha) {
+    try (java.sql.Connection c = database.ConexaoDB.getConexao()) {
+        String perfil = usuarioDAO.realizarLogin(c, usuario, senha);
+        if (perfil != null) {
+            Sessao.getInstance().logar(usuario, perfil); // Salva o crachá na Sessão
+            return true;
+        }
+        return false;
+        } catch (java.sql.SQLException e) {
+            throw dao.SqlUtil.traduzir(e);
         }
     }
 }
