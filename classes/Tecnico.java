@@ -1,77 +1,37 @@
 package classes;
 
-import java.io.Serializable;
-
-public class Tecnico implements Serializable{
-    private String id;
+public class Tecnico {
+    private int id;
     private String nome;
-    private String especialidade;
     private String telefone;
     private boolean disponivel;
+    private TipoTecnico tipo;
 
-    // Construtor
-    public Tecnico(String id, String nome, String especialidade, String telefone) {
-        this.id = id;
-        this.nome = nome;
-        this.especialidade = especialidade;
-        this.telefone = telefone;
-        this.disponivel = true;   // todo técnico criado está inicialmente disponível
-    }
-
-    // Métodos de negócio
-    public void alterarDisponibilidade() {
-        this.disponivel = !this.disponivel;
+    public Tecnico(int id, String nome, String telefone, boolean disponivel, TipoTecnico tipo) {
+        this.id = id; 
+        this.nome = nome; 
+        this.telefone = telefone; 
+        this.disponivel = disponivel; 
+        this.tipo = tipo;
     }
 
-    public void ocupar() {
-        this.disponivel = false;
+    public Tecnico(int id, String nome, String telefone, TipoTecnico tipo) {
+        this(id, nome, telefone, true, tipo);
     }
 
-    public void liberar() {
-        this.disponivel = true;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
+    public String getTelefone() { return telefone; }
+    public void setTelefone(String telefone) { this.telefone = telefone; }
+    public boolean isDisponivel() { return disponivel; }
+    public void setDisponivel(boolean disponivel) { this.disponivel = disponivel; }
+    public TipoTecnico getTipo() { return tipo; }
+    public void setTipo(TipoTecnico tipo) { this.tipo = tipo; }
 
-    // Getters e Setters
-    public String getId() {
-        return id;
-    }
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getNome() {
-        return nome;
-    }
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public String getEspecialidade() {
-        return especialidade;
-    }
-    public void setEspecialidade(String especialidade) {
-        this.especialidade = especialidade;
-    }
-
-    public String getTelefone() {
-        return telefone;
-    }
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
-    }
-
-    public boolean isDisponivel() {
-        return disponivel;
-    }
-    public void setDisponivel(boolean disponivel) {
-        this.disponivel = disponivel;
-    }
-
-    // toString pra facilitar listagem no console
+    public String getEspecialidade() { return tipo.getEspecialidade(); }
+    
     @Override
-    public String toString() {
-        return String.format("[%s] %s | %s | Tel: %s | %s",
-                id, nome, especialidade, telefone,
-                disponivel ? "DISPONÍVEL" : "OCUPADO");
-    }
+    public String toString() { return nome; }
 }

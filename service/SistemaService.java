@@ -1,184 +1,197 @@
 package service;
 
 import classes.*;
+import database.ConexaoDB;
+import dao.*;
 import exception.*;
-import java.io.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.List;
 
 public class SistemaService {
-    private List<Maquina> maquinas = new ArrayList<>();
-    private List<Tecnico> tecnicos = new ArrayList<>();
-    private List<Peca> pecas = new ArrayList<>();
-    private List<Falha> falhas = new ArrayList<>();
-    private List<Manutencao> manutencoes = new ArrayList<>();
+    
+    private TipoMaquinaDAO tipoMaquinaDAO = new TipoMaquinaDAO();
+    private TipoTecnicoDAO tipoTecnicoDAO = new TipoTecnicoDAO();
+    private MaquinaDAO maquinaDAO = new MaquinaDAO();
+    private TecnicoDAO tecnicoDAO = new TecnicoDAO();
+    private PecaDAO pecaDAO = new PecaDAO();
+    private FalhaDAO falhaDAO = new FalhaDAO();
+    private ManutencaoDAO manutencaoDAO = new ManutencaoDAO();
 
-    // --- MÉTODOS DE CADASTRO ---
-    public void cadastrarMaquina(Maquina m) { maquinas.add(m); }
-    public void cadastrarTecnico(Tecnico t) { tecnicos.add(t); }
-    public void cadastrarPeca(Peca p) { pecas.add(p); }
-
-    // --- MÉTODO DE EXCLUSÃO ---
-    public boolean excluirMaquina(String id) {
-        for (int i = 0; i < maquinas.size(); i++) {
-            if (maquinas.get(i).getId().equals(id)) {
-                maquinas.remove(i);
-                return true;
-            }
+    public SistemaService() {
+        try { 
+            ConexaoDB.inicializar(); 
+        } catch (SQLException e) { 
+            throw new RuntimeException("Erro ao iniciar banco de dados: " + e.getMessage()); 
         }
-        return false;
     }
 
-    // --- MÉTODOS DE BUSCA ---
-    public Maquina buscarMaquina(String id) throws MaquinaInexistenteException {
-        for (Maquina m : maquinas) {
-            if (m.getId().equals(id)) return m;
+    // ================= LEITURA =================
+    public List<Maquina> getMaquinas() {
+        try (Connection c = ConexaoDB.getConexao()) { return maquinaDAO.listar(c); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public List<Tecnico> getTecnicos() {
+        try (Connection c = ConexaoDB.getConexao()) { return tecnicoDAO.listar(c); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public List<Peca> getPecas() {
+        try (Connection c = ConexaoDB.getConexao()) { return pecaDAO.listar(c); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public List<Manutencao> getManutencoes() {
+        try (Connection c = ConexaoDB.getConexao()) { return manutencaoDAO.listar(c); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public List<TipoMaquina> getTiposMaquina() {
+        try (Connection c = ConexaoDB.getConexao()) { return tipoMaquinaDAO.listar(c); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public List<TipoTecnico> getTiposTecnico() {
+        try (Connection c = ConexaoDB.getConexao()) { return tipoTecnicoDAO.listar(c); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    // ================= CADASTROS =================
+    public void cadastrarTipoMaquina(TipoMaquina t) {
+        try (Connection c = ConexaoDB.getConexao()) { tipoMaquinaDAO.inserir(c, t); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public void cadastrarTipoTecnico(TipoTecnico t) {
+        try (Connection c = ConexaoDB.getConexao()) { tipoTecnicoDAO.inserir(c, t); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public void cadastrarMaquina(Maquina m) {
+        try (Connection c = ConexaoDB.getConexao()) { maquinaDAO.inserir(c, m); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public void cadastrarTecnico(Tecnico t) {
+        try (Connection c = ConexaoDB.getConexao()) { tecnicoDAO.inserir(c, t); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public void cadastrarPeca(Peca p) {
+        try (Connection c = ConexaoDB.getConexao()) { pecaDAO.inserir(c, p); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    // ================= OPERAÇÕES =================
+    public boolean excluirMaquina(int id) {
+        try (Connection c = ConexaoDB.getConexao()) { return maquinaDAO.excluir(c, id); } 
+        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
+    public void registrarFalha(String descricao, int idMaquina) throws MaquinaInexistenteException {
+        try (Connection c = ConexaoDB.getConexao()) {
+            Maquina m = maquinaDAO.buscarPorId(c, idMaquina);
+            if (m == null) throw new MaquinaInexistenteException("Máquina com ID " + idMaquina + " não encontrada.");
+            
+            Falha f = new Falha(0, descricao, m, LocalDateTime.now());
+            falhaDAO.inserir(c, f);
+            maquinaDAO.atualizarStatus(c, idMaquina, "QUEBRADA");
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
         }
-        throw new MaquinaInexistenteException("Máquina com ID " + id + " não encontrada.");
     }
 
-    public Tecnico buscarTecnico(String id) {
-        for (Tecnico t : tecnicos) {
-            if (t.getId().equals(id)) return t;
-        }
-        return null;
-    }
-
-    public Peca buscarPeca(String id) {
-        for (Peca p : pecas) {
-            if (p.getId().equals(id)) return p;
-        }
-        return null;
-    }
-
-    // --- REGRAS DE NEGÓCIO ---
-    public void registrarFalha(String descricao, String idMaquina) throws MaquinaInexistenteException {
-        Maquina m = buscarMaquina(idMaquina);
-        falhas.add(new Falha("F" + (falhas.size() + 1), descricao, m));
-        m.setStatus("QUEBRADA");
-    }
-
-    public void abrirCorretiva(String descricao, String idMaquina, String causa, String gravidade) 
+    public int abrirCorretiva(String desc, int idMaquina, String causa, String gravidade) 
             throws MaquinaInexistenteException, MaquinaInativaException {
-        Maquina m = buscarMaquina(idMaquina);
-        if (m.getStatus().equalsIgnoreCase("INATIVA")) {
-            throw new MaquinaInativaException("Não é possível manutenção em máquina inativa.");
+        try (Connection c = ConexaoDB.getConexao()) {
+            Maquina m = maquinaDAO.buscarPorId(c, idMaquina);
+            if (m == null) throw new MaquinaInexistenteException("Máquina não encontrada.");
+            if (m.getStatus().equals("INATIVA")) throw new MaquinaInativaException("Máquina inativa não pode sofrer manutenção.");
+            
+            ManutencaoCorretiva mc = new ManutencaoCorretiva(0, desc, m, causa, gravidade);
+            manutencaoDAO.inserir(c, mc);
+            return mc.getId();
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
         }
-        manutencoes.add(new ManutencaoCorretiva("M" + (manutencoes.size() + 1), descricao, m, causa, gravidade));
     }
 
-    public void atribuirTecnico(String idManutencao, String idTecnico) throws TecnicoIndisponivelException {
-        Tecnico t = buscarTecnico(idTecnico);
-        if (t == null || !t.isDisponivel()) {
-            throw new TecnicoIndisponivelException("Técnico indisponível ou não encontrado.");
+    public int abrirPreventiva(String desc, int idMaquina, int dias) 
+            throws MaquinaInexistenteException, MaquinaInativaException {
+        try (Connection c = ConexaoDB.getConexao()) {
+            Maquina m = maquinaDAO.buscarPorId(c, idMaquina);
+            if (m == null) throw new MaquinaInexistenteException("Máquina não encontrada.");
+            if (m.getStatus().equals("INATIVA")) throw new MaquinaInativaException("Máquina inativa não pode sofrer manutenção.");
+            
+            ManutencaoPreventiva mp = new ManutencaoPreventiva(0, desc, m, dias);
+            manutencaoDAO.inserir(c, mp);
+            return mp.getId();
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
         }
-        
-        for (Manutencao m : manutencoes) {
-            if (m.getId().equals(idManutencao)) {
-                t.ocupar();
-                m.setTecnico(t);
-                m.setStatus("EM_EXECUCAO");
-                return;
+    }
+
+    public void atribuirTecnico(int idManutencao, int idTecnico) 
+            throws TecnicoIndisponivelException, ManutencaoInexistenteException, ManutencaoFinalizadaException {
+        try (Connection c = ConexaoDB.getConexao()) {
+            Manutencao m = manutencaoDAO.buscarPorId(c, idManutencao);
+            if (m == null) throw new ManutencaoInexistenteException("Manutenção não encontrada.");
+            if (m.getStatus().equals("CONCLUIDA")) throw new ManutencaoFinalizadaException("Manutenção já concluída.");
+            
+            Tecnico t = tecnicoDAO.buscarPorId(c, idTecnico);
+            if (t == null) throw new TecnicoIndisponivelException("Técnico não encontrado.");
+            if (!t.isDisponivel()) throw new TecnicoIndisponivelException("Técnico já está ocupado.");
+            
+            t.setDisponivel(false);
+            tecnicoDAO.atualizarDisponibilidade(c, idTecnico, false);
+            m.setTecnico(t);
+            m.setStatus("EM_EXECUCAO");
+            manutencaoDAO.atualizar(c, m);
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
+        }
+    }
+
+    public void adicionarPecaNaManutencao(int idManutencao, int idPeca, int qtd) 
+            throws EstoqueInsuficienteException, ManutencaoInexistenteException, ManutencaoFinalizadaException {
+        try (Connection c = ConexaoDB.getConexao()) {
+            Manutencao m = manutencaoDAO.buscarPorId(c, idManutencao);
+            if (m == null) throw new ManutencaoInexistenteException("Manutenção não encontrada.");
+            if (m.getStatus().equals("CONCLUIDA")) throw new ManutencaoFinalizadaException("Manutenção já concluída.");
+            
+            // O DAO do Duck já faz a baixa e insere o item!
+            manutencaoDAO.registrarPeca(c, idManutencao, idPeca, qtd);
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
+        }
+    }
+
+    public double concluirManutencao(int idManutencao) 
+            throws ManutencaoInexistenteException, ManutencaoFinalizadaException {
+        try (Connection c = ConexaoDB.getConexao()) {
+            Manutencao m = manutencaoDAO.buscarPorId(c, idManutencao);
+            if (m == null) throw new ManutencaoInexistenteException("Manutenção não encontrada.");
+            if (m.getStatus().equals("CONCLUIDA")) throw new ManutencaoFinalizadaException("Manutenção já concluída.");
+
+            double custoFinal = m.calcularCusto();
+            m.setStatus("CONCLUIDA");
+            m.setCusto(custoFinal);
+            
+            manutencaoDAO.atualizar(c, m);
+            
+            // Libera o técnico de volta pro mercado
+            if (m.getTecnico() != null) {
+                tecnicoDAO.atualizarDisponibilidade(c, m.getTecnico().getId(), true);
             }
+            
+            // Coloca a máquina de volta em operação
+            maquinaDAO.atualizarStatus(c, m.getMaquina().getId(), "ATIVA");
+            
+            return custoFinal;
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
         }
-    }
-
-    public void adicionarPecaNaManutencao(String idManutencao, String idPeca, int quantidade) 
-            throws EstoqueInsuficienteException, Exception {
-        
-        Manutencao manutencao = null;
-        for (Manutencao m : manutencoes) {
-            if (m.getId().equals(idManutencao)) {
-                manutencao = m;
-                break;
-            }
-        }
-        
-        if (manutencao == null) throw new Exception("Manutenção não encontrada.");
-        if (manutencao.getStatus().equals("CONCLUIDA")) throw new Exception("Manutenção já concluída.");
-
-        Peca peca = buscarPeca(idPeca);
-        if (peca == null) throw new Exception("Peça não encontrada no estoque.");
-
-        manutencao.adicionarPeca(peca, quantidade); 
-    }
-
-    public void concluirManutencao(String idManutencao) throws ManutencaoFinalizadaException {
-        for (Manutencao m : manutencoes) {
-            if (m.getId().equals(idManutencao)) {
-                if (m.getStatus().equals("CONCLUIDA")) {
-                    throw new ManutencaoFinalizadaException("Essa manutenção já foi finalizada.");
-                }
-                m.concluir(); 
-                
-                if (m.getTecnico() != null) m.getTecnico().liberar();
-                m.getMaquina().setStatus("ATIVA");
-                
-                System.out.println("Manutenção " + m.getId() + " concluída!");
-                System.out.println("Custo total (Mão de obra + Peças): R$ " + String.format("%.2f", m.getCusto()));
-                return;
-            }
-        }
-    }
-
-    // --- LISTAGENS ---
-    public void listarManutencoes() {
-        if (manutencoes.isEmpty()) { System.out.println("Nenhuma manutenção registrada."); return; }
-        for (Manutencao m : manutencoes) m.exibirDetalhes();
-    }
-
-    public void listarMaquinas() {
-        if (maquinas.isEmpty()) { System.out.println("Nenhuma máquina cadastrada."); return; }
-        System.out.println("--- INVENTÁRIO DE MÁQUINAS ---");
-        for (Maquina m : maquinas) {
-            System.out.println("[" + m.getId() + "] " + m.getNome() + " | Modelo: " + m.getModelo() + " | Status: " + m.getStatus());
-        }
-    }
-
-    public void listarTecnicos() {
-        if (tecnicos.isEmpty()) { System.out.println("Nenhum técnico cadastrado."); return; }
-        System.out.println("--- EQUIPE DE TÉCNICOS ---");
-        for (Tecnico t : tecnicos) {
-            System.out.println("[" + t.getId() + "] " + t.getNome() + " | Especialidade: " + t.getEspecialidade() + " | Status: " + (t.isDisponivel() ? "DISPONÍVEL" : "OCUPADO"));
-        }
-    }
-
-    public void listarPecas() {
-        if (pecas.isEmpty()) { System.out.println("Nenhuma peça no estoque."); return; }
-        System.out.println("--- INVENTÁRIO DE PEÇAS ---");
-        for (Peca p : pecas) {
-            System.out.println("[" + p.getId() + "] " + p.getNome() + " | Qtd em estoque: " + p.getQuantidadeEstoque() + " | Valor: R$ " + p.getValorUnitario());
-        }
-    }
-
-    // --- PERSISTÊNCIA ---
-    public void salvar() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("dados.dat"))) {
-            oos.writeObject(maquinas); oos.writeObject(tecnicos);
-            oos.writeObject(pecas); oos.writeObject(falhas); oos.writeObject(manutencoes);
-        } catch (IOException e) { System.out.println("Erro ao salvar: " + e.getMessage()); }
-    }
-
-    @SuppressWarnings("unchecked")
-    public void carregar() {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("dados.dat"))) {
-            maquinas = (List<Maquina>) ois.readObject();
-            tecnicos = (List<Tecnico>) ois.readObject();
-            pecas = (List<Peca>) ois.readObject();
-            falhas = (List<Falha>) ois.readObject();
-            manutencoes = (List<Manutencao>) ois.readObject();
-        } catch (Exception e) { /* Primeira execução */ }
-    }
-        // MÉTODOS GETTERS PARA A INTERFACE GRÁFICA (JTable)
-    public List<Maquina> getMaquinas() { 
-        return maquinas; 
-    }
-    public List<Tecnico> getTecnicos() { 
-        return tecnicos; 
-    }
-    public List<Peca> getPecas() { 
-        return pecas; 
-    }
-    public List<Manutencao> getManutencoes() { 
-        return manutencoes; 
     }
 }
