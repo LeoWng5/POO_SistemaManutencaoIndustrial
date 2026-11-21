@@ -10,17 +10,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Comandos SQL das tabelas tipo_maquina (molde de máquina)
- * e tipo_maquina_peca (a "receita" de peças recomendadas).
- */
 public class TipoMaquinaDAO {
 
     public void inserir(Connection conn, TipoMaquina t) throws SQLException {
-        String sql = "INSERT INTO tipo_maquina (nome, fabricante_padrao) VALUES (?, ?)";
+        String sql = "INSERT INTO tipo_maquina (nome, fabricante_padrao, vida_util_anos) VALUES (?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, t.getNome());
             ps.setString(2, t.getFabricantePadrao());
+            ps.setInt(3, t.getVidaUtilAnos());
             ps.executeUpdate();
         }
         t.setId(SqlUtil.ultimoId(conn));
@@ -28,15 +25,15 @@ public class TipoMaquinaDAO {
     }
 
     public TipoMaquina buscarPorId(Connection conn, int id) throws SQLException {
-        String sql = "SELECT nome, fabricante_padrao FROM tipo_maquina WHERE id = ?";
+        String sql = "SELECT nome, fabricante_padrao, vida_util_anos FROM tipo_maquina WHERE id = ?";
         TipoMaquina tipo;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return null;
-                }
-                tipo = new TipoMaquina(id, rs.getString("nome"), rs.getString("fabricante_padrao"));
+                if (!rs.next()) return null;
+                tipo = new TipoMaquina(id, rs.getString("nome"),
+                        rs.getString("fabricante_padrao"),
+                        rs.getInt("vida_util_anos"));
             }
         }
         carregarReceita(conn, tipo);
@@ -51,13 +48,13 @@ public class TipoMaquinaDAO {
         return lista;
     }
 
-    // Atualiza o molde e troca a receita inteira pela nova
     public void atualizar(Connection conn, TipoMaquina t) throws SQLException {
-        String sql = "UPDATE tipo_maquina SET nome = ?, fabricante_padrao = ? WHERE id = ?";
+        String sql = "UPDATE tipo_maquina SET nome = ?, fabricante_padrao = ?, vida_util_anos = ? WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, t.getNome());
             ps.setString(2, t.getFabricantePadrao());
-            ps.setInt(3, t.getId());
+            ps.setInt(3, t.getVidaUtilAnos());
+            ps.setInt(4, t.getId());
             ps.executeUpdate();
         }
         try (PreparedStatement ps = conn.prepareStatement(

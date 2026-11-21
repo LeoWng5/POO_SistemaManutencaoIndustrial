@@ -6,7 +6,6 @@ import dao.*;
 import exception.*;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class SistemaService {
@@ -91,16 +90,18 @@ public class SistemaService {
         catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
+    // ... imports originais mantidos ...
+
     public void registrarFalha(String descricao, int idMaquina) throws MaquinaInexistenteException {
         try (Connection c = ConexaoDB.getConexao()) {
             Maquina m = maquinaDAO.buscarPorId(c, idMaquina);
             if (m == null) throw new MaquinaInexistenteException("Máquina com ID " + idMaquina + " não encontrada.");
-            
-            Falha f = new Falha(0, descricao, m, LocalDateTime.now());
+
+            Falha f = new Falha(0, descricao, m, RelogioSistema.agora());
             falhaDAO.inserir(c, f);
             maquinaDAO.atualizarStatus(c, idMaquina, "QUEBRADA");
-        } catch (SQLException e) { 
-            throw SqlUtil.traduzir(e); 
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
         }
     }
 

@@ -11,25 +11,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MaquinaDAO {
+
     private final TipoMaquinaDAO tipoDAO = new TipoMaquinaDAO();
 
     public void inserir(Connection conn, Maquina m) throws SQLException {
-        String sql = "INSERT INTO maquina (numero_serie, status, data_aquisicao, url_foto, tipo_maquina_id) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO maquina (numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id) "
+                   + "VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, m.getNumeroSerie());
             ps.setString(2, m.getStatus());
             ps.setString(3, m.getDataAquisicao().toString());
-            ps.setString(4, m.getFoto()); // <-- AQUI
-            ps.setInt(5, m.getTipo().getId());
+            ps.setDouble(4, m.getValorAquisicao());
+            ps.setString(5, m.getFoto());
+            ps.setInt(6, m.getTipo().getId());
             ps.executeUpdate();
         }
         m.setId(SqlUtil.ultimoId(conn));
     }
 
     public Maquina buscarPorId(Connection conn, int id) throws SQLException {
-        String sql = "SELECT numero_serie, status, data_aquisicao, url_foto, tipo_maquina_id FROM maquina WHERE id = ?";
+        String sql = "SELECT numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id "
+                   + "FROM maquina WHERE id = ?";
         String serie, status, foto;
         LocalDate data;
+        double valor;
         int tipoId;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -38,12 +43,13 @@ public class MaquinaDAO {
                 serie = rs.getString("numero_serie");
                 status = rs.getString("status");
                 data = LocalDate.parse(rs.getString("data_aquisicao"));
-                foto = rs.getString("url_foto"); // <-- AQUI
+                valor = rs.getDouble("valor_aquisicao");
+                foto = rs.getString("url_foto");
                 tipoId = rs.getInt("tipo_maquina_id");
             }
         }
         TipoMaquina tipo = tipoDAO.buscarPorId(conn, tipoId);
-        return new Maquina(id, serie, status, data, tipo, foto);
+        return new Maquina(id, serie, status, data, valor, tipo, foto);
     }
 
     public List<Maquina> listar(Connection conn) throws SQLException {
@@ -55,14 +61,16 @@ public class MaquinaDAO {
     }
 
     public void atualizar(Connection conn, Maquina m) throws SQLException {
-        String sql = "UPDATE maquina SET numero_serie = ?, status = ?, data_aquisicao = ?, url_foto = ?, tipo_maquina_id = ? WHERE id = ?";
+        String sql = "UPDATE maquina SET numero_serie = ?, status = ?, data_aquisicao = ?, "
+                   + "valor_aquisicao = ?, url_foto = ?, tipo_maquina_id = ? WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, m.getNumeroSerie());
             ps.setString(2, m.getStatus());
             ps.setString(3, m.getDataAquisicao().toString());
-            ps.setString(4, m.getFoto()); // <-- AQUI
-            ps.setInt(5, m.getTipo().getId());
-            ps.setInt(6, m.getId());
+            ps.setDouble(4, m.getValorAquisicao());
+            ps.setString(5, m.getFoto());
+            ps.setInt(6, m.getTipo().getId());
+            ps.setInt(7, m.getId());
             ps.executeUpdate();
         }
     }
@@ -81,15 +89,13 @@ public class MaquinaDAO {
             return ps.executeUpdate() > 0;
         }
     }
-    
+
     public int contarPorStatus(Connection conn, String status) throws SQLException {
         String sql = "SELECT COUNT(*) FROM maquina WHERE status = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, status);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
+                if (rs.next()) return rs.getInt(1);
             }
         }
         return 0;

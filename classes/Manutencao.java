@@ -1,9 +1,12 @@
 package classes;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import service.RelogioSistema;
 
 public abstract class Manutencao {
+
     private int id;
     private LocalDate data;
     private String status, descricao;
@@ -13,16 +16,19 @@ public abstract class Manutencao {
     private List<ItemPeca> itens = new ArrayList<>();
 
     public Manutencao(int id, String descricao, Maquina maquina) {
-        this.id = id; this.descricao = descricao; this.maquina = maquina;
-        this.data = LocalDate.now(); this.status = "ABERTA";
+        this.id = id;
+        this.descricao = descricao;
+        this.maquina = maquina;
+        this.data = RelogioSistema.hoje();
+        this.status = "ABERTA";
     }
 
-    public abstract String getTipo(); 
-    
+    public abstract String getTipo();
+
     public void carregarItem(Peca p, int qtd) { this.itens.add(new ItemPeca(p, qtd)); }
-    
+
     public double calcularCusto() {
-        double custoMaoDeObra = 100.0; // Valor fixo, já que removemos o valor/hora
+        double custoMaoDeObra = 100.0;
         double total = custoMaoDeObra;
         for (ItemPeca i : itens) total += i.getSubtotal();
         return total;

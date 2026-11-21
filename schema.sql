@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS tipo_maquina (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT NOT NULL UNIQUE,
-    fabricante_padrao TEXT
+    fabricante_padrao TEXT,
+    vida_util_anos INTEGER NOT NULL DEFAULT 5
 );
 
 CREATE TABLE IF NOT EXISTS tipo_tecnico (
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS maquina (
     numero_serie TEXT NOT NULL UNIQUE,
     status TEXT NOT NULL DEFAULT 'ATIVA',
     data_aquisicao TEXT NOT NULL,
+    valor_aquisicao REAL NOT NULL DEFAULT 0,
     url_foto TEXT,
     tipo_maquina_id INTEGER NOT NULL,
     FOREIGN KEY (tipo_maquina_id) REFERENCES tipo_maquina(id)

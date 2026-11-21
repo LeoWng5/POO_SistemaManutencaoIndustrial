@@ -1,7 +1,6 @@
 import classes.*;
 import exception.*;
-import service.*;                     
-import service.SistemaService;
+import service.*;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -18,15 +17,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 
-/**
- * Interface Gráfica 2.0 — Dashboard estilo ERP / Office Ribbon, com Modo Escuro.
- * Apenas camada de visualização: todo o backend (Service/DAO) é reaproveitado.
- */
 public class App extends JFrame {
 
-    // ============================================================
-    // PALETA (mutável para suportar Modo Escuro)
-    // ============================================================
     static boolean darkMode = false;
 
     static Color BG_APP, BG_CARD, PRIMARY, PRIMARY_D, ACCENT, DANGER, SUCCESS, TEXT, MUTED, BORDER, TAB_BG;
@@ -60,7 +52,6 @@ public class App extends JFrame {
         SUCCESS = new Color(0x27AE60);
     }
 
-    /** Faz o JOptionPane, labels e campos criados DEPOIS do login respeitarem o modo escuro. */
     private static void aplicarTemaGlobal() {
         if (!darkMode) return;
         UIManager.put("OptionPane.background", BG_CARD);
@@ -80,9 +71,6 @@ public class App extends JFrame {
     static final Font F_BODY  = new Font("Segoe UI", Font.PLAIN, 13);
     static final Font F_BIG   = new Font("Segoe UI", Font.BOLD, 34);
 
-    // ============================================================
-    // ESTADO
-    // ============================================================
     private SistemaService service;
 
     private JPanel painelCentral;
@@ -98,9 +86,8 @@ public class App extends JFrame {
     private DefaultTableModel modeloPecas;
     private DefaultTableModel modeloManutencoes;
 
-    // ============================================================
-    // CONSTRUTOR
-    // ============================================================
+    private JLabel lblDataStatus;
+
     public App() {
         try {
             service = new SistemaService();
@@ -118,7 +105,7 @@ public class App extends JFrame {
             return;
         }
 
-        aplicarTemaGlobal();   // depois do login, antes de criar a interface principal
+        aplicarTemaGlobal();
 
         setTitle("🏭 Gestão de Manutenção Industrial — v2.0");
         setSize(1366, 820);
@@ -128,7 +115,7 @@ public class App extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(BG_APP);
 
-        JPanel main = buildMain();     // cria cardCentral antes do ribbon
+        JPanel main = buildMain();
         add(buildRibbon(), BorderLayout.NORTH);
         add(main, BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
@@ -136,12 +123,9 @@ public class App extends JFrame {
         atualizarTudo();
     }
 
-    // ============================================================
-    // HELPER DE BOTÃO (cores funcionam em qualquer Look and Feel)
-    // ============================================================
     private void estilizarBotao(JButton b, Color bg, Color fg) {
         if (b.getUI().getClass() != BasicButtonUI.class) {
-            b.setUI(new BasicButtonUI());      // ignora o LAF nativo, que apaga cores e texto
+            b.setUI(new BasicButtonUI());
         }
         b.setContentAreaFilled(false);
         b.setOpaque(true);
@@ -154,9 +138,6 @@ public class App extends JFrame {
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
-    // ============================================================
-    // LOGIN (RBAC + alternância de tema)
-    // ============================================================
     private boolean fazerLogin() {
         JDialog dlg = new JDialog((Frame) null, "Acesso ao Sistema", true);
         dlg.setSize(420, 410);
@@ -198,7 +179,6 @@ public class App extends JFrame {
             dlg.getContentPane().repaint();
         };
 
-        // Header
         header.setPreferredSize(new Dimension(0, 90));
         JLabel t = new JLabel("GESTÃO DE MANUTENÇÃO", SwingConstants.CENTER);
         t.setForeground(Color.WHITE);
@@ -209,7 +189,6 @@ public class App extends JFrame {
         header.add(t, BorderLayout.CENTER);
         header.add(sub, BorderLayout.SOUTH);
 
-        // Form
         form.setBorder(new EmptyBorder(20, 32, 10, 32));
         GridBagConstraints g = new GridBagConstraints();
         g.fill = GridBagConstraints.HORIZONTAL;
@@ -226,7 +205,6 @@ public class App extends JFrame {
         g.gridy = 3; form.add(txtPass, g);
         g.gridy = 4; form.add(lblErro, g);
 
-        // Footer: checkbox à esquerda, botões à direita
         chkDark.setFont(F_BODY);
         chkDark.setFocusPainted(false);
         chkDark.addActionListener(e -> {
@@ -249,7 +227,10 @@ public class App extends JFrame {
             String s = new String(txtPass.getPassword());
             if (u.isEmpty() || s.isEmpty()) { lblErro.setText("Informe usuário e senha."); return; }
             try {
-                service.realizarLogin(u, s);
+                if (!service.realizarLogin(u, s)) {
+                    lblErro.setText("Usuário ou senha inválidos.");
+                    return;
+                }
                 ok[0] = true;
                 dlg.dispose();
             } catch (Exception ex) {
@@ -264,7 +245,7 @@ public class App extends JFrame {
         dlg.add(form, BorderLayout.CENTER);
         dlg.add(footer, BorderLayout.SOUTH);
 
-        temaLogin.run();   // cores iniciais
+        temaLogin.run();
         dlg.setVisible(true);
         return ok[0];
     }
@@ -274,9 +255,6 @@ public class App extends JFrame {
         catch (Throwable t) { return false; }
     }
 
-    // ============================================================
-    // RIBBON (estilo Office)
-    // ============================================================
     private JPanel buildRibbon() {
         JPanel ribbon = new JPanel();
         ribbon.setLayout(new BoxLayout(ribbon, BoxLayout.Y_AXIS));
@@ -361,6 +339,7 @@ public class App extends JFrame {
                 if (isAdmin()) {
                     p.add(ribbonBtn("Excluir Máquina", e -> excluirMaquina()));
                     p.add(ribbonBtn("Relatório Histórico", e -> abrirRelatorioHistorico()));
+                    p.add(ribbonBtn("⏰ Alterar Data", e -> alterarDataSistema()));
                 } else {
                     JLabel l = new JLabel("⚠ Acesso restrito ao perfil ADMINISTRADOR.");
                     l.setForeground(MUTED);
@@ -387,9 +366,6 @@ public class App extends JFrame {
         return b;
     }
 
-    // ============================================================
-    // ÁREA CENTRAL (CardLayout: DASH | PREDITIVA | DADOS)
-    // ============================================================
     private JPanel buildMain() {
         painelCentral = new JPanel();
         cardCentral = new CardLayout();
@@ -408,9 +384,6 @@ public class App extends JFrame {
         return painelCentral;
     }
 
-    // ============================================================
-    // DASHBOARD
-    // ============================================================
     class DashboardPanel extends JPanel {
         private final BarChartPanel chartMaquinas;
         private final BarChartPanel chartTecnicos;
@@ -436,7 +409,6 @@ public class App extends JFrame {
                     new Color[]{SUCCESS, ACCENT});
             grid.add(wrapCard("Equipe Técnica", chartTecnicos));
 
-            // Card de custos
             JPanel custoCard = new JPanel(new BorderLayout(0, 6));
             custoCard.setBackground(BG_CARD);
             custoCard.setBorder(new CompoundBorder(
@@ -449,7 +421,6 @@ public class App extends JFrame {
             custoCard.add(lc, BorderLayout.NORTH);
             custoCard.add(lblCustoTotal, BorderLayout.CENTER);
 
-            // Card preditivo
             JPanel predCard = new JPanel(new BorderLayout(0, 6));
             predCard.setBackground(BG_CARD);
             predCard.setBorder(new CompoundBorder(
@@ -507,7 +478,6 @@ public class App extends JFrame {
         }
     }
 
-    /** Gráfico de barras pintado com Graphics2D (sem dependências externas). */
     class BarChartPanel extends JComponent {
         private final String[] labels;
         private final Color[] cores;
@@ -521,10 +491,7 @@ public class App extends JFrame {
             setOpaque(false);
         }
 
-        void setValores(int[] v) {
-            this.valores = v;
-            repaint();
-        }
+        void setValores(int[] v) { this.valores = v; repaint(); }
 
         @Override
         protected void paintComponent(Graphics g) {
@@ -564,9 +531,6 @@ public class App extends JFrame {
         }
     }
 
-    // ============================================================
-    // TELA PREDITIVA
-    // ============================================================
     private JPanel buildPreditivaPanel() {
         JPanel painel = new JPanel(new BorderLayout(0, 12));
         painel.setBackground(BG_APP);
@@ -576,7 +540,8 @@ public class App extends JFrame {
         titulo.setFont(F_TITLE);
         titulo.setForeground(TEXT);
 
-        JLabel sub = new JLabel("Equipamentos ordenados do mais crítico para o menos crítico (depreciação em 5 anos).");
+        JLabel sub = new JLabel("Equipamentos ordenados do mais crítico para o menos crítico "
+                + "(saúde calculada pela vida útil do tipo).");
         sub.setFont(F_BODY);
         sub.setForeground(MUTED);
 
@@ -605,7 +570,7 @@ public class App extends JFrame {
         painelPreditivaLista.removeAll();
         try {
             List<Maquina> ms = new ArrayList<>(service.getMaquinas());
-            ms.sort(Comparator.comparingDouble(Maquina::getSaudeEquipamento));
+            ms.sort(Comparator.comparingInt(Maquina::getSaudeEquipamento));
             if (ms.isEmpty()) {
                 JLabel vazio = new JLabel("Nenhum equipamento cadastrado.");
                 vazio.setForeground(MUTED);
@@ -613,7 +578,7 @@ public class App extends JFrame {
                 painelPreditivaLista.add(vazio);
             }
             for (Maquina m : ms) {
-                double s = m.getSaudeEquipamento();
+                int s = m.getSaudeEquipamento();
                 painelPreditivaLista.add(cardPreditiva(m, s));
                 painelPreditivaLista.add(Box.createRigidArea(new Dimension(0, 8)));
             }
@@ -624,7 +589,7 @@ public class App extends JFrame {
         painelPreditivaLista.repaint();
     }
 
-    private JPanel cardPreditiva(Maquina m, double saude) {
+    private JPanel cardPreditiva(Maquina m, int saude) {
         Color cor = saude < 30 ? DANGER : saude < 60 ? ACCENT : SUCCESS;
         String alerta = saude < 30 ? "⚠ Troca iminente" : saude < 60 ? "Monitorar" : "OK";
 
@@ -639,11 +604,11 @@ public class App extends JFrame {
         nome.setForeground(TEXT);
 
         JProgressBar pb = new JProgressBar(0, 100);
-        pb.setValue((int) Math.max(0, Math.min(100, saude)));
+        pb.setValue(saude);
         pb.setForeground(cor);
         pb.setBackground(BORDER);
         pb.setStringPainted(true);
-        pb.setString(String.format("%.0f%% de saúde", saude));
+        pb.setString(saude + "% de saúde");
         pb.setBorderPainted(false);
 
         JLabel lblAlerta = new JLabel(alerta);
@@ -660,9 +625,6 @@ public class App extends JFrame {
         return c;
     }
 
-    // ============================================================
-    // TABELAS
-    // ============================================================
     private JPanel buildTabelasPanel() {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(BG_APP);
@@ -756,13 +718,11 @@ public class App extends JFrame {
         return sp;
     }
 
-    // ============================================================
-    // REFRESH GERAL
-    // ============================================================
     private void atualizarTudo() {
         atualizarTabelas();
         if (dashboardPanel != null) dashboardPanel.atualizar();
         if (painelPreditivaLista != null) atualizarPreditiva();
+        atualizarLabelData();
     }
 
     private void atualizarTabelas() {
@@ -775,7 +735,7 @@ public class App extends JFrame {
             for (Maquina m : service.getMaquinas()) {
                 modeloMaquinas.addRow(new Object[]{
                     m.getId(), m.getNumeroSerie(), m.getNome(), m.getFabricante(),
-                    m.getStatus(), String.format("%.0f%%", m.getSaudeEquipamento())
+                    m.getStatus(), m.getSaudeEquipamento() + "%"
                 });
             }
             for (Tecnico t : service.getTecnicos()) {
@@ -803,9 +763,6 @@ public class App extends JFrame {
         }
     }
 
-    // ============================================================
-    // STATUS BAR
-    // ============================================================
     private JPanel buildStatusBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(TAB_BG);
@@ -819,16 +776,101 @@ public class App extends JFrame {
         lbl.setForeground(MUTED);
         bar.add(lbl, BorderLayout.WEST);
 
-        JLabel data = new JLabel(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-        data.setFont(F_BODY);
-        data.setForeground(MUTED);
-        bar.add(data, BorderLayout.EAST);
+        lblDataStatus = new JLabel();
+        lblDataStatus.setFont(F_BODY);
+        atualizarLabelData();
+        bar.add(lblDataStatus, BorderLayout.EAST);
         return bar;
     }
 
-    // ============================================================
-    // HELPERS
-    // ============================================================
+    private void atualizarLabelData() {
+        if (lblDataStatus == null) return;
+        LocalDate d = RelogioSistema.hoje();
+        String fmt = d.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        if (RelogioSistema.estaSimulando()) {
+            lblDataStatus.setText("DATA SIMULADA: " + fmt);
+            lblDataStatus.setForeground(ACCENT);
+        } else {
+            lblDataStatus.setText(fmt);
+            lblDataStatus.setForeground(MUTED);
+        }
+    }
+
+    private void alterarDataSistema() {
+        if (!isAdmin()) {
+            JOptionPane.showMessageDialog(this, "Apenas ADMINISTRADOR pode alterar a data.",
+                    "Acesso negado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        JDialog dlg = new JDialog(this, "Alterar Data do Sistema", true);
+        dlg.setSize(420, 260);
+        dlg.setLocationRelativeTo(this);
+        dlg.setLayout(new BorderLayout());
+        dlg.getContentPane().setBackground(BG_CARD);
+
+        SpinnerDateModel model = new SpinnerDateModel();
+        JSpinner spinner = new JSpinner(model);
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(spinner, "dd/MM/yyyy");
+        spinner.setEditor(editor);
+        spinner.setValue(java.sql.Date.valueOf(RelogioSistema.hoje()));
+        editor.getTextField().setBackground(BG_APP);
+        editor.getTextField().setForeground(TEXT);
+
+        JPanel topo = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topo.setBackground(BG_CARD);
+        topo.setBorder(new EmptyBorder(12, 16, 4, 16));
+        JLabel l = new JLabel("Data:");
+        l.setForeground(TEXT);
+        topo.add(l);
+        topo.add(spinner);
+
+        JPanel botoes = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        botoes.setBackground(BG_CARD);
+        botoes.setBorder(new EmptyBorder(0, 12, 0, 12));
+        JButton btnMes = new JButton("+1 mês");
+        estilizarBotao(btnMes, BG_APP, TEXT);
+        btnMes.addActionListener(e -> {
+            Calendar c = Calendar.getInstance();
+            c.setTime((Date) spinner.getValue());
+            c.add(Calendar.MONTH, 1);
+            spinner.setValue(c.getTime());
+        });
+        JButton btnAno = new JButton("+1 ano");
+        estilizarBotao(btnAno, BG_APP, TEXT);
+        btnAno.addActionListener(e -> {
+            Calendar c = Calendar.getInstance();
+            c.setTime((Date) spinner.getValue());
+            c.add(Calendar.YEAR, 1);
+            spinner.setValue(c.getTime());
+        });
+        JButton btnReset = new JButton("Voltar para hoje");
+        estilizarBotao(btnReset, BG_APP, TEXT);
+        btnReset.addActionListener(e -> spinner.setValue(java.sql.Date.valueOf(LocalDate.now())));
+        botoes.add(btnMes); botoes.add(btnAno); botoes.add(btnReset);
+
+        JPanel rodape = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
+        rodape.setBackground(BG_CARD);
+        JButton btnCancelar = new JButton("Cancelar");
+        estilizarBotao(btnCancelar, BG_APP, TEXT);
+        btnCancelar.addActionListener(e -> dlg.dispose());
+        JButton btnOk = new JButton("Aplicar");
+        estilizarBotao(btnOk, PRIMARY, Color.WHITE);
+        btnOk.addActionListener(e -> {
+            Date d = (Date) spinner.getValue();
+            LocalDate ld = new java.sql.Date(d.getTime()).toLocalDate();
+            RelogioSistema.setData(ld);
+            dlg.dispose();
+            atualizarTudo();
+        });
+        rodape.add(btnCancelar);
+        rodape.add(btnOk);
+
+        dlg.add(topo, BorderLayout.NORTH);
+        dlg.add(botoes, BorderLayout.CENTER);
+        dlg.add(rodape, BorderLayout.SOUTH);
+        dlg.setVisible(true);
+    }
+
     private void mostrarErro(Exception e) {
         String msg = (e instanceof NumberFormatException) ? "Digite um número válido." : e.getMessage();
         JOptionPane.showMessageDialog(this, "Erro: " + msg, "Erro", JOptionPane.ERROR_MESSAGE);
@@ -865,38 +907,38 @@ public class App extends JFrame {
         return null;
     }
 
-    /** Cria um JLabel já com a cor de texto do tema. */
     private JLabel lbl(String texto) {
         JLabel l = new JLabel(texto);
         l.setForeground(TEXT);
         return l;
     }
 
-    /** Aplica cores do tema em campos de texto. */
     private void estilizarCampo(JTextField f) {
         f.setBackground(BG_APP);
         f.setForeground(TEXT);
         f.setCaretColor(TEXT);
     }
 
-    // ============================================================
-    // DETALHES (miniaturas)
-    // ============================================================
     private void mostrarDetalhesMaquina(Maquina m) {
         JDialog d = new JDialog(this, "Detalhes da Máquina", true);
-        d.setSize(560, 340);
+        d.setSize(620, 440);
         d.setLocationRelativeTo(this);
         d.getContentPane().setBackground(BG_CARD);
 
         JPanel info = new JPanel(new GridLayout(0, 2, 8, 6));
         info.setBackground(BG_CARD);
         info.setBorder(new EmptyBorder(16, 16, 16, 16));
-        info.add(lbl("ID:"));         info.add(lbl(String.valueOf(m.getId())));
-        info.add(lbl("Tipo:"));       info.add(lbl(m.getNome()));
-        info.add(lbl("S/N:"));        info.add(lbl(m.getNumeroSerie()));
-        info.add(lbl("Fabricante:")); info.add(lbl(m.getFabricante()));
-        info.add(lbl("Status:"));     info.add(lbl(m.getStatus()));
-        info.add(lbl("Saúde:"));      info.add(lbl(String.format("%.0f%%", m.getSaudeEquipamento())));
+        NumberFormat nf = NumberFormat.getCurrencyInstance(Locale.of("pt", "BR"));
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        info.add(lbl("ID:"));                info.add(lbl(String.valueOf(m.getId())));
+        info.add(lbl("Tipo:"));              info.add(lbl(m.getNome()));
+        info.add(lbl("S/N:"));               info.add(lbl(m.getNumeroSerie()));
+        info.add(lbl("Fabricante:"));        info.add(lbl(m.getFabricante()));
+        info.add(lbl("Status:"));            info.add(lbl(m.getStatus()));
+        info.add(lbl("Saúde:"));             info.add(lbl(m.getSaudeEquipamento() + "%"));
+        info.add(lbl("Data de Aquisição:")); info.add(lbl(m.getDataAquisicao().format(df)));
+        info.add(lbl("Valor de Aquisição:"));info.add(lbl(nf.format(m.getValorAquisicao())));
+        info.add(lbl("Valor Residual:"));    info.add(lbl(nf.format(m.getValorResidual())));
 
         JLabel foto = new JLabel("Sem foto", SwingConstants.CENTER);
         foto.setForeground(MUTED);
@@ -947,16 +989,23 @@ public class App extends JFrame {
         d.setVisible(true);
     }
 
-    // ============================================================
-    // AÇÕES — CADASTROS
-    // ============================================================
     private void cadastrarTipoMaquina() {
         try {
-            String nome = JOptionPane.showInputDialog(this, "Nome do tipo de máquina (ex: Torno CNC):");
-            if (nome == null || nome.isBlank()) return;
-            String fab = JOptionPane.showInputDialog(this, "Fabricante padrão:");
-            if (fab == null) return;
-            service.cadastrarTipoMaquina(new TipoMaquina(0, nome.trim(), fab.trim()));
+            JTextField txtNome = new JTextField();
+            JTextField txtFab = new JTextField();
+            JSpinner spVida = new JSpinner(new SpinnerNumberModel(5, 1, 100, 1));
+            Object[] msg = {
+                "Nome do tipo de máquina:", txtNome,
+                "Fabricante padrão:", txtFab,
+                "Vida útil (anos):", spVida
+            };
+            int r = JOptionPane.showConfirmDialog(this, msg, "Novo Tipo de Máquina",
+                    JOptionPane.OK_CANCEL_OPTION);
+            if (r != JOptionPane.OK_OPTION) return;
+            String nome = txtNome.getText().trim();
+            if (nome.isEmpty()) return;
+            service.cadastrarTipoMaquina(new TipoMaquina(0, nome,
+                    txtFab.getText().trim(), (int) spVida.getValue()));
             JOptionPane.showMessageDialog(this, "Tipo de máquina cadastrado!");
             atualizarTudo();
         } catch (RuntimeException e) { mostrarErro(e); }
@@ -972,7 +1021,6 @@ public class App extends JFrame {
         } catch (RuntimeException e) { mostrarErro(e); }
     }
 
-    /** Formulário de Máquina com JFileChooser e preview. */
     private void cadastrarMaquina() {
         try {
             List<TipoMaquina> tipos = service.getTiposMaquina();
@@ -982,7 +1030,7 @@ public class App extends JFrame {
                 return;
             }
             JDialog dlg = new JDialog(this, "Cadastrar Máquina", true);
-            dlg.setSize(500, 460);
+            dlg.setSize(500, 640);
             dlg.setLocationRelativeTo(this);
             dlg.getContentPane().setBackground(BG_CARD);
             dlg.setLayout(new BorderLayout());
@@ -1000,12 +1048,27 @@ public class App extends JFrame {
             cbTipo.setBackground(BG_APP); cbTipo.setForeground(TEXT);
             g.gridy = 1; form.add(cbTipo, g);
 
-            g.gridy = 2; form.add(lbl("Número de Série:"), g);
+            g.gridy = 2; form.add(lbl("Data de Aquisição:"), g);
+            SpinnerDateModel dateModel = new SpinnerDateModel();
+            JSpinner spData = new JSpinner(dateModel);
+            JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(spData, "dd/MM/yyyy");
+            spData.setEditor(dateEditor);
+            spData.setValue(java.sql.Date.valueOf(RelogioSistema.hoje()));
+            dateEditor.getTextField().setBackground(BG_APP);
+            dateEditor.getTextField().setForeground(TEXT);
+            g.gridy = 3; form.add(spData, g);
+
+            g.gridy = 4; form.add(lbl("Valor de Aquisição (R$):"), g);
+            JTextField txtValor = new JTextField("0,00");
+            estilizarCampo(txtValor);
+            g.gridy = 5; form.add(txtValor, g);
+
+            g.gridy = 6; form.add(lbl("Número de Série:"), g);
             JTextField txtSerie = new JTextField();
             estilizarCampo(txtSerie);
-            g.gridy = 3; form.add(txtSerie, g);
+            g.gridy = 7; form.add(txtSerie, g);
 
-            g.gridy = 4; form.add(lbl("Foto (opcional):"), g);
+            g.gridy = 8; form.add(lbl("Foto (opcional):"), g);
             JPanel fotoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
             fotoPanel.setBackground(BG_CARD);
             JLabel preview = new JLabel("Sem foto", SwingConstants.CENTER);
@@ -1027,7 +1090,7 @@ public class App extends JFrame {
             });
             fotoPanel.add(preview);
             fotoPanel.add(btnFoto);
-            g.gridy = 5; form.add(fotoPanel, g);
+            g.gridy = 9; form.add(fotoPanel, g);
 
             JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
             botoes.setBackground(BG_CARD);
@@ -1044,8 +1107,23 @@ public class App extends JFrame {
                     String serie = txtSerie.getText().trim();
                     if (serie.isEmpty()) throw new RuntimeException("Informe o número de série.");
                     TipoMaquina tipo = (TipoMaquina) cbTipo.getSelectedItem();
+
+                    Date d = (Date) spData.getValue();
+                    LocalDate dataAq = new java.sql.Date(d.getTime()).toLocalDate();
+                    if (dataAq.isAfter(RelogioSistema.hoje())) {
+                        throw new RuntimeException("Data de aquisição não pode ser futura.");
+                    }
+
+                    double valor;
+                    try {
+                        valor = Double.parseDouble(txtValor.getText().trim().replace(',', '.'));
+                    } catch (NumberFormatException ex) {
+                        throw new RuntimeException("Valor de aquisição inválido.");
+                    }
+                    if (valor < 0) throw new RuntimeException("Valor não pode ser negativo.");
+
                     service.cadastrarMaquina(new Maquina(0, serie, "ATIVA",
-                            LocalDate.now(), tipo, fotoPath[0]));
+                            dataAq, valor, tipo, fotoPath[0]));
                     dlg.dispose();
                     JOptionPane.showMessageDialog(this, "Máquina cadastrada!");
                     atualizarTudo();
@@ -1058,7 +1136,6 @@ public class App extends JFrame {
         } catch (RuntimeException e) { mostrarErro(e); }
     }
 
-    /** Formulário de Técnico com foto. */
     private void cadastrarTecnico() {
         try {
             List<TipoTecnico> tipos = service.getTiposTecnico();
@@ -1168,9 +1245,6 @@ public class App extends JFrame {
         } catch (RuntimeException e) { mostrarErro(e); }
     }
 
-    // ============================================================
-    // AÇÕES — MANUTENÇÃO
-    // ============================================================
     private void excluirMaquina() {
         if (!isAdmin()) {
             JOptionPane.showMessageDialog(this, "Apenas ADMINISTRADOR pode excluir.",
@@ -1273,9 +1347,6 @@ public class App extends JFrame {
         } catch (ManutencaoInexistenteException | ManutencaoFinalizadaException | RuntimeException e) { mostrarErro(e); }
     }
 
-    // ============================================================
-    // RELATÓRIOS
-    // ============================================================
     private JScrollPane areaTexto(String texto, int w, int h) {
         JTextArea ta = new JTextArea(texto);
         ta.setEditable(false);
@@ -1321,35 +1392,62 @@ public class App extends JFrame {
                 "Histórico de Manutenções", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // ============================================================
-    // TUTORIAL
-    // ============================================================
-    private void exibirTutorial() {
+        private void exibirTutorial() {
         String texto =
-            "BEM-VINDO AO SISTEMA DE MANUTENÇÃO INDUSTRIAL v2.0\n"
-          + "==================================================\n\n"
-          + "NOVO LAYOUT:\n"
-          + "• Barra superior com abas (Início / Cadastros / Manutenção / Estoque / Administração)\n"
-          + "• Dashboard com gráficos e custo acumulado\n"
-          + "• Tela 'Preditiva' ordena equipamentos por saúde\n"
-          + "• Modo Escuro: marque a opção na tela de login\n\n"
-          + "FLUXO RECOMENDADO:\n"
-          + "1) Cadastros → Tipo de Máquina / Tipo de Técnico\n"
-          + "2) Cadastros → Máquina / Técnico / Peça  (com foto)\n"
-          + "3) Manutenção → Registrar Falha (máquina fica QUEBRADA)\n"
-          + "4) Manutenção → Abrir Corretiva OU Abrir Preventiva\n"
-          + "5) Manutenção → Atribuir Técnico / Usar Peça\n"
-          + "6) Manutenção → Concluir (custo calculado, máquina volta a ATIVA)\n\n"
-          + "PERFIL OPERADOR: pode cadastrar, mas não exclui.\n"
-          + "PERFIL ADM: acesso completo.";
+            "═══════════════════════════════════════════════════════════════════════\n"
+          + "                 CENTRAL DE AJUDA E DÚVIDAS (FAQ)\n"
+          + "             Sistema de Manutenção Industrial v2.0\n"
+          + "═══════════════════════════════════════════════════════════════════════\n\n"
+          
+          + "1. COMO FUNCIONA O RELÓGIO E A SIMULAÇÃO DE DATA?\n"
+          + "   • Por padrão, o sistema usa a data real do seu computador.\n"
+          + "   • Para testar cenários futuros, vá em: Administração → ⏰ Alterar Data.\n"
+          + "   • Lá você pode usar os atalhos (+1 mês, +1 ano) ou escolher uma data exata.\n"
+          + "   • Quando a data está simulada, a barra inferior fica LARANJA com o aviso\n"
+          + "     'DATA SIMULADA'. Para voltar ao normal, clique em 'Voltar para hoje'.\n"
+          + "   • ATENÇÃO: A data simulada afeta todo o sistema (cadastros e manutenções).\n\n"
+          
+          + "2. QUAL A DIFERENÇA ENTRE O PERFIL ADM E O OPERADOR?\n"
+          + "   • ADMINISTRADOR (ADM): Tem acesso total. É o único que pode:\n"
+          + "       - Alterar a data do sistema (simulação);\n"
+          + "       - Excluir máquinas do sistema;\n"
+          + "       - Emitir o Relatório Histórico completo.\n"
+          + "   • OPERADOR: Pode cadastrar máquinas, técnicos, peças, registrar falhas,\n"
+          + "     atribuir técnicos, usar peças e concluir manutenções.\n\n"
+          
+          + "3. COMO FUNCIONA A SAÚDE E A DEPRECIAÇÃO DA MÁQUINA?\n"
+          + "   • A saúde do equipamento é calculada automaticamente baseada na idade dele.\n"
+          + "   • Fórmula: 100 − (dias de uso ÷ (vida útil × 365)) × 100.\n"
+          + "   • A 'vida útil' é definida lá no cadastro do 'Tipo de Máquina' (padrão 5 anos).\n"
+          + "   • Uma máquina com 4 anos de uso (e vida útil de 5 anos) terá 20% de saúde.\n"
+          + "   • Se a data do sistema for avançada, a saúde cai. Se voltar para hoje,\n"
+          + "     a saúde é recalculada com a data correta.\n\n"
+          
+          + "4. QUAL A DIFERENÇA ENTRE MANUTENÇÃO CORRETIVA E PREVENTIVA?\n"
+          + "   • CORRETIVA: Aberta quando a máquina quebra (você clica em 'Registrar Falha'\n"
+          + "     e depois em 'Abrir Corretiva'). A máquina fica com status QUEBRADA.\n"
+          + "   • PREVENTIVA: Aberta para evitar que a máquina quebre. Possui uma data\n"
+          + "     de próxima manutenção programada (periodicidade).\n\n"
+          
+          + "5. COMO CONCLUIR UMA MANUTENÇÃO?\n"
+          + "   • Vá em 'Manutenção → Concluir'. Informe o ID da manutenção.\n"
+          + "   • O sistema calculará o custo final (mão de obra + peças usadas),\n"
+          + "     devolverá a máquina para o status ATIVA e liberará o técnico.\n\n"
+          
+          + "6. FLUXO BÁSICO RECOMENDADO (PASSO A PASSO)\n"
+          + "   Passo 1: Cadastros → Tipo de Máquina (define vida útil e peças padrão)\n"
+          + "   Passo 2: Cadastros → Tipo de Técnico, Máquina, Técnico e Peças.\n"
+          + "   Passo 3: Manutenção → Registrar Falha (se a máquina quebrou).\n"
+          + "   Passo 4: Manutenção → Abrir Corretiva ou Abrir Preventiva.\n"
+          + "   Passo 5: Manutenção → Atribuir Técnico (técnico fica OCUPADO).\n"
+          + "   Passo 6: Manutenção → Usar Peça (baixa no estoque).\n"
+          + "   Passo 7: Manutenção → Concluir (custo gerado e máquina consertada).\n"
+          + "═══════════════════════════════════════════════════════════════════════";
 
-        JOptionPane.showMessageDialog(this, areaTexto(texto, 620, 460),
-                "Tutorial", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, areaTexto(texto, 720, 520),
+                "Tutorial e Ajuda", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // ============================================================
-    // MAIN
-    // ============================================================
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
         catch (Exception ignore) {}
