@@ -6,6 +6,7 @@ import dao.*;
 import exception.*;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 
 public class SistemaService {
@@ -58,6 +59,22 @@ public class SistemaService {
         catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
+    public List<Manutencao> getManutencoesPorPeriodo(LocalDate inicio, LocalDate fim) {
+        try (Connection c = ConexaoDB.getConexao()) { 
+            return manutencaoDAO.listarPorPeriodo(c, inicio, fim); 
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
+        }
+    }
+
+    public List<Manutencao> getManutencoesPorMaquina(int idMaquina) {
+        try (Connection c = ConexaoDB.getConexao()) {
+            return manutencaoDAO.listar(c).stream()
+                    .filter(m -> m.getMaquina() != null && m.getMaquina().getId() == idMaquina)
+                    .toList();
+        } catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    }
+
     // ================= CADASTROS =================
     public void cadastrarTipoMaquina(TipoMaquina t) {
         try (Connection c = ConexaoDB.getConexao()) { tipoMaquinaDAO.inserir(c, t); } 
@@ -90,18 +107,16 @@ public class SistemaService {
         catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
-    // ... imports originais mantidos ...
-
     public void registrarFalha(String descricao, int idMaquina) throws MaquinaInexistenteException {
         try (Connection c = ConexaoDB.getConexao()) {
             Maquina m = maquinaDAO.buscarPorId(c, idMaquina);
             if (m == null) throw new MaquinaInexistenteException("Máquina com ID " + idMaquina + " não encontrada.");
-
+            
             Falha f = new Falha(0, descricao, m, RelogioSistema.agora());
             falhaDAO.inserir(c, f);
             maquinaDAO.atualizarStatus(c, idMaquina, "QUEBRADA");
-        } catch (SQLException e) {
-            throw SqlUtil.traduzir(e);
+        } catch (SQLException e) { 
+            throw SqlUtil.traduzir(e); 
         }
     }
 
@@ -135,6 +150,14 @@ public class SistemaService {
         }
     }
 
+    public boolean temPreventivaAberta(int idMaquina) {
+        return getManutencoes().stream()
+            .anyMatch(m -> m.getTipo().equals("PREVENTIVA") 
+                        && !m.getStatus().equals("CONCLUIDA") 
+                        && m.getMaquina() != null 
+                        && m.getMaquina().getId() == idMaquina);
+    }
+
     public void atribuirTecnico(int idManutencao, int idTecnico) 
             throws TecnicoIndisponivelException, ManutencaoInexistenteException, ManutencaoFinalizadaException {
         try (Connection c = ConexaoDB.getConexao()) {
@@ -163,7 +186,6 @@ public class SistemaService {
             if (m == null) throw new ManutencaoInexistenteException("Manutenção não encontrada.");
             if (m.getStatus().equals("CONCLUIDA")) throw new ManutencaoFinalizadaException("Manutenção já concluída.");
             
-            // O DAO do Duck já faz a baixa e insere o item!
             manutencaoDAO.registrarPeca(c, idManutencao, idPeca, qtd);
         } catch (SQLException e) { 
             throw SqlUtil.traduzir(e); 
@@ -183,12 +205,9 @@ public class SistemaService {
             
             manutencaoDAO.atualizar(c, m);
             
-            // Libera o técnico de volta pro mercado
             if (m.getTecnico() != null) {
                 tecnicoDAO.atualizarDisponibilidade(c, m.getTecnico().getId(), true);
             }
-            
-            // Coloca a máquina de volta em operação
             maquinaDAO.atualizarStatus(c, m.getMaquina().getId(), "ATIVA");
             
             return custoFinal;
@@ -199,27 +218,26 @@ public class SistemaService {
 
     public int getTotalMaquinasPorStatus(String status) {
         try (Connection c = ConexaoDB.getConexao()) {
-            // Faz um SELECT COUNT(*) FROM maquina WHERE status = ?
             return maquinaDAO.contarPorStatus(c, status);
         } catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
     public int getTotalTecnicosPorDisponibilidade(boolean disponivel) {
-    try (Connection c = ConexaoDB.getConexao()) {
-        return tecnicoDAO.contarPorDisponibilidade(c, disponivel);
-    } catch (SQLException e) { throw SqlUtil.traduzir(e); }
+        try (Connection c = ConexaoDB.getConexao()) {
+            return tecnicoDAO.contarPorDisponibilidade(c, disponivel);
+        } catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
     public boolean realizarLogin(String usuario, String senha) {
-    try (java.sql.Connection c = database.ConexaoDB.getConexao()) {
-        String perfil = usuarioDAO.realizarLogin(c, usuario, senha);
-        if (perfil != null) {
-            Sessao.getInstance().logar(usuario, perfil); // Salva o crachá na Sessão
-            return true;
-        }
-        return false;
-        } catch (java.sql.SQLException e) {
-            throw dao.SqlUtil.traduzir(e);
+        try (Connection c = ConexaoDB.getConexao()) {
+            String perfil = usuarioDAO.realizarLogin(c, usuario, senha);
+            if (perfil != null) {
+                Sessao.getInstance().logar(usuario, perfil);
+                return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
         }
     }
 }

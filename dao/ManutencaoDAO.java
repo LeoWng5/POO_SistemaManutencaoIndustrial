@@ -193,4 +193,19 @@ public class ManutencaoDAO {
             }
         }
     }
+
+    public List<Manutencao> listarPorPeriodo(Connection conn, java.time.LocalDate inicio, java.time.LocalDate fim) throws SQLException {
+        List<Manutencao> lista = new ArrayList<>();
+        String sql = "SELECT id FROM manutencao WHERE data >= ? AND data <= ? ORDER BY data";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, inicio.toString());
+            ps.setString(2, fim.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(buscarPorId(conn, rs.getInt(1)));
+                }
+            }
+        }
+        return lista;
+    }
 }
