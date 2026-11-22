@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +16,9 @@ public class MaquinaDAO {
     private final TipoMaquinaDAO tipoDAO = new TipoMaquinaDAO();
 
     public void inserir(Connection conn, Maquina m) throws SQLException {
-                String sql = "INSERT INTO maquina (numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id, dias_recuperados) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO maquina (numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, "
+                   + "tipo_maquina_id, data_base_depreciacao, vida_util_atual_anos) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, m.getNumeroSerie());
             ps.setString(2, m.getStatus());
@@ -24,20 +26,22 @@ public class MaquinaDAO {
             ps.setDouble(4, m.getValorAquisicao());
             ps.setString(5, m.getFoto());
             ps.setInt(6, m.getTipo().getId());
-            ps.setLong(7, m.getDiasRecuperados());
+            ps.setString(7, m.getDataBaseDepreciacao() == null ? null : m.getDataBaseDepreciacao().toString());
+            if (m.getVidaUtilAtualAnos() == null) ps.setNull(8, Types.INTEGER);
+            else ps.setInt(8, m.getVidaUtilAtualAnos());
             ps.executeUpdate();
         }
         m.setId(SqlUtil.ultimoId(conn));
     }
 
     public Maquina buscarPorId(Connection conn, int id) throws SQLException {
-        String sql = "SELECT numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id, dias_recuperados "
-           + "FROM maquina WHERE id = ?";
-        String serie, status, foto;
+        String sql = "SELECT numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id, "
+                   + "data_base_depreciacao, vida_util_atual_anos FROM maquina WHERE id = ?";
+        String serie, status, foto, base;
         LocalDate data;
         double valor;
         int tipoId;
-        long recuperados;
+        Integer vidaAtual;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -48,11 +52,14 @@ public class MaquinaDAO {
                 valor = rs.getDouble("valor_aquisicao");
                 foto = rs.getString("url_foto");
                 tipoId = rs.getInt("tipo_maquina_id");
-                recuperados = rs.getLong("dias_recuperados");
+                base = rs.getString("data_base_depreciacao");
+                int v = rs.getInt("vida_util_atual_anos");
+                vidaAtual = rs.wasNull() ? null : v;
             }
         }
         TipoMaquina tipo = tipoDAO.buscarPorId(conn, tipoId);
-        return new Maquina(id, serie, status, data, valor, tipo, foto, recuperados);
+        return new Maquina(id, serie, status, data, valor, tipo, foto,
+                           base == null ? null : LocalDate.parse(base), vidaAtual);
     }
 
     public List<Maquina> listar(Connection conn) throws SQLException {
@@ -65,7 +72,8 @@ public class MaquinaDAO {
 
     public void atualizar(Connection conn, Maquina m) throws SQLException {
         String sql = "UPDATE maquina SET numero_serie = ?, status = ?, data_aquisicao = ?, "
-                   + "valor_aquisicao = ?, url_foto = ?, tipo_maquina_id = ? WHERE id = ?";
+                   + "valor_aquisicao = ?, url_foto = ?, tipo_maquina_id = ?, "
+                   + "data_base_depreciacao = ?, vida_util_atual_anos = ? WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, m.getNumeroSerie());
             ps.setString(2, m.getStatus());
@@ -73,7 +81,10 @@ public class MaquinaDAO {
             ps.setDouble(4, m.getValorAquisicao());
             ps.setString(5, m.getFoto());
             ps.setInt(6, m.getTipo().getId());
-            ps.setInt(7, m.getId());
+            ps.setString(7, m.getDataBaseDepreciacao() == null ? null : m.getDataBaseDepreciacao().toString());
+            if (m.getVidaUtilAtualAnos() == null) ps.setNull(8, Types.INTEGER);
+            else ps.setInt(8, m.getVidaUtilAtualAnos());
+            ps.setInt(9, m.getId());
             ps.executeUpdate();
         }
     }

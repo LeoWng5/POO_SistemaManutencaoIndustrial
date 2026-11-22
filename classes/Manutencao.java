@@ -25,6 +25,9 @@ public abstract class Manutencao {
 
     public abstract String getTipo();
 
+    /** Indica se concluir este tipo de manutenção renova a vida útil da máquina. */
+    public boolean recuperaVidaUtil() { return false; }
+
     public void carregarItem(Peca p, int qtd) { this.itens.add(new ItemPeca(p, qtd)); }
 
     public double calcularCusto() {
@@ -49,5 +52,4 @@ public abstract class Manutencao {
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
     public List<ItemPeca> getItens() { return itens; }
-    public boolean recuperaVidaUtil() { return false; }
 }

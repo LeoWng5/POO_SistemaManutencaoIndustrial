@@ -1112,137 +1112,196 @@ public class App extends JFrame {
         } catch (RuntimeException e) { mostrarErro(e); }
     }
 
-    private void cadastrarTipoMaquina() {
+        private void cadastrarTipoMaquina() {
         try {
+            List<Peca> todasPecas = service.getPecas();
+
             JTextField txtNome = new JTextField();
             JTextField txtFab = new JTextField();
             JSpinner spVida = new JSpinner(new SpinnerNumberModel(5, 1, 100, 1));
             estilizarCampo(txtNome); estilizarCampo(txtFab); estilizarSpinner(spVida);
 
-            List<Peca> todasPecas = service.getPecas();
+            JDialog dlg = new JDialog(this, "Novo Tipo de Máquina", true);
+            dlg.setSize(560, 680);
+            dlg.setMinimumSize(new Dimension(480, 560));
+            dlg.setLocationRelativeTo(this);
+            dlg.setLayout(new BorderLayout());
+            dlg.getContentPane().setBackground(BG_CARD);
 
-            // ---- Peças recomendadas: checklist pesquisável (scroll fácil de listas grandes) ----
-            JPanel painelPecas = new JPanel(new GridLayout(0, 2, 4, 4));
-            painelPecas.setBackground(classicBg());
+            // ---------- Dados do tipo (topo) ----------
+            JPanel dados = new JPanel(new GridBagLayout());
+            dados.setBackground(BG_CARD);
+            dados.setBorder(new EmptyBorder(16, 24, 8, 24));
+            GridBagConstraints g = new GridBagConstraints();
+            g.fill = GridBagConstraints.HORIZONTAL; g.insets = new Insets(4, 4, 4, 4); g.weightx = 1; g.gridx = 0;
+            g.gridy = 0; dados.add(lbl("Nome do Tipo:"), g);
+            g.gridy = 1; dados.add(txtNome, g);
+            g.gridy = 2; dados.add(lbl("Fabricante:"), g);
+            g.gridy = 3; dados.add(txtFab, g);
+            g.gridy = 4; dados.add(lbl("Vida Útil (anos):"), g);
+            g.gridy = 5; dados.add(spVida, g);
+
+            // ---------- Peças recomendadas (centro, ocupa o espaço restante) ----------
             List<JCheckBox> chks = new ArrayList<>();
             List<JSpinner> spins = new ArrayList<>();
+            List<JPanel> linhas = new ArrayList<>();
+
+            JLabel lblConta = new JLabel(" ");
+            lblConta.setFont(F_SUBT); lblConta.setForeground(MUTED);
+
+            JPanel painelLinhas = new JPanel(new GridLayout(0, 1, 0, 4));
+            painelLinhas.setBackground(BG_CARD);
 
             for (Peca p : todasPecas) {
                 JCheckBox chk = new JCheckBox(p.getNome());
-                chk.setName("pec#" + p.getId());         // identifica a peça para o filtro
-                chk.setBackground(classicBg()); chk.setForeground(Color.BLACK);
+                chk.setBackground(BG_CARD); chk.setForeground(TEXT);
+                chk.setFont(F_BODY); chk.setFocusPainted(false);
+                chk.setToolTipText("Estoque atual: " + p.getQuantidadeEstoque());
+
                 JSpinner sp = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
                 estilizarSpinner(sp);
-                painelPecas.add(chk); painelPecas.add(sp);
-                chks.add(chk); spins.add(sp);
+                sp.setPreferredSize(new Dimension(80, 28));
+                sp.setEnabled(false);                       // só habilita quando marcada
+
+                JPanel linha = new JPanel(new BorderLayout(8, 0));
+                linha.setBackground(BG_CARD);
+                linha.setBorder(new EmptyBorder(2, 4, 2, 4));
+                linha.add(chk, BorderLayout.CENTER);
+                linha.add(sp, BorderLayout.EAST);
+
+                chks.add(chk); spins.add(sp); linhas.add(linha);
             }
 
-            JScrollPane scrollPecas = new JScrollPane(painelPecas);
-            scrollPecas.setPreferredSize(new Dimension(460, 210));
-            scrollPecas.setBorder(null);
-            scrollPecas.getViewport().setBackground(classicBg());
+            JTextField txtBusca = new JTextField();
+            estilizarCampo(txtBusca);
+
+            // Reconstrói a lista só com as peças que batem com a busca (sem espaços vazios)
+            Runnable reconstruir = () -> {
+                String q = txtBusca.getText().toLowerCase().trim();
+                painelLinhas.removeAll();
+                int visiveis = 0, marcados = 0;
+                for (int i = 0; i < chks.size(); i++) {
+                    if (chks.get(i).isSelected()) marcados++;
+                    if (chks.get(i).getText().toLowerCase().contains(q)) {
+                        painelLinhas.add(linhas.get(i));
+                        visiveis++;
+                    }
+                }
+                if (todasPecas.isEmpty()) {
+                    JLabel vazio = new JLabel("Nenhuma peça cadastrada. Cadastre peças antes.");
+                    vazio.setForeground(MUTED); vazio.setFont(F_BODY);
+                    painelLinhas.add(vazio);
+                } else if (visiveis == 0) {
+                    JLabel vazio = new JLabel("Nenhuma peça encontrada para a busca.");
+                    vazio.setForeground(MUTED); vazio.setFont(F_BODY);
+                    painelLinhas.add(vazio);
+                }
+                lblConta.setText((marcados == 0 ? "Nenhuma marcada" : marcados + " marcada" + (marcados > 1 ? "s" : ""))
+                        + " · " + visiveis + " de " + chks.size() + " exibidas");
+                painelLinhas.revalidate();
+                painelLinhas.repaint();
+            };
+
+            // Marcar/desmarcar atualiza o spinner e o contador
+            for (int i = 0; i < chks.size(); i++) {
+                final JSpinner sp = spins.get(i);
+                final JCheckBox chk = chks.get(i);
+                chk.addItemListener(e -> { sp.setEnabled(chk.isSelected()); reconstruir.run(); });
+            }
+
+            txtBusca.getDocument().addDocumentListener(new DocumentListener() {
+                public void insertUpdate(DocumentEvent e) { reconstruir.run(); }
+                public void removeUpdate(DocumentEvent e) { reconstruir.run(); }
+                public void changedUpdate(DocumentEvent e) { reconstruir.run(); }
+            });
+
+            // Âncora no topo: as linhas mantêm altura fixa em vez de esticar
+            JPanel ancora = new JPanel(new BorderLayout());
+            ancora.setBackground(BG_CARD);
+            ancora.add(painelLinhas, BorderLayout.NORTH);
+
+            JScrollPane scrollPecas = new JScrollPane(ancora);
+            scrollPecas.setBorder(new LineBorder(BORDER, 1));
+            scrollPecas.getViewport().setBackground(BG_CARD);
             scrollPecas.getVerticalScrollBar().setUnitIncrement(16);
             scrollPecas.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-            // Busca em tempo real: filtra as peças pelo nome enquanto digita
-            JTextField txtBusca = new JTextField();
-            estilizarCampo(txtBusca);
-            JLabel lblConta = new JLabel(todasPecas.isEmpty() ? "Nenhuma peça cadastrada." : "Nenhum marcado · 0 de " + todasPecas.size() + " peças exibidas");
-            lblConta.setFont(F_SUBT); lblConta.setForeground(MUTED);
-
-            JPanel barraBusca = new JPanel(new BorderLayout(6, 0));
-            barraBusca.setBackground(classicBg());
-            barraBusca.add(lblClassic("Buscar:"), BorderLayout.WEST);
+            JPanel barraBusca = new JPanel(new BorderLayout(8, 0));
+            barraBusca.setBackground(BG_CARD);
+            barraBusca.add(lbl("Buscar:"), BorderLayout.WEST);
             barraBusca.add(txtBusca, BorderLayout.CENTER);
-            barraBusca.add(lblConta, BorderLayout.EAST);
 
-            // Seleção rápida para listas grandes
+            JPanel topoPecas = new JPanel(new BorderLayout(0, 4));
+            topoPecas.setBackground(BG_CARD);
+            topoPecas.add(barraBusca, BorderLayout.NORTH);
+            topoPecas.add(lblConta, BorderLayout.SOUTH);
+
+            JButton btnTodos = new JButton("Marcar todas");
+            JButton btnLimpar = new JButton("Desmarcar todas");
+            estilizarBotao(btnTodos, BG_APP, TEXT);
+            estilizarBotao(btnLimpar, BG_APP, TEXT);
+            // Atuam apenas nas peças visíveis no filtro atual
+            btnTodos.addActionListener(e -> {
+                String q = txtBusca.getText().toLowerCase().trim();
+                chks.forEach(c -> { if (c.getText().toLowerCase().contains(q)) c.setSelected(true); });
+                reconstruir.run();
+            });
+            btnLimpar.addActionListener(e -> {
+                String q = txtBusca.getText().toLowerCase().trim();
+                chks.forEach(c -> { if (c.getText().toLowerCase().contains(q)) c.setSelected(false); });
+                reconstruir.run();
+            });
             JPanel barraBotoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 4));
-            barraBotoes.setBackground(classicBg());
-            JButton btnTodos = new JButton("Marcar todos");   estilizarBotao(btnTodos, classicBg(), Color.BLACK);
-            JButton btnLimpar = new JButton("Desmarcar todos"); estilizarBotao(btnLimpar, classicBg(), Color.BLACK);
+            barraBotoes.setBackground(BG_CARD);
             barraBotoes.add(btnTodos); barraBotoes.add(btnLimpar);
 
-            // Bloco composto: busca no topo, lista rolável no meio, botões embaixo
-            JPanel blocoPecas = new JPanel(new BorderLayout(0, 4));
-            blocoPecas.setBackground(classicBg());
-            blocoPecas.setBorder(new CompoundBorder(new LineBorder(BORDER, 1), new EmptyBorder(6, 6, 6, 6)));
-            blocoPecas.add(barraBusca, BorderLayout.NORTH);
+            JPanel blocoPecas = new JPanel(new BorderLayout(0, 6));
+            blocoPecas.setBackground(BG_CARD);
+            blocoPecas.setBorder(new EmptyBorder(0, 28, 0, 28));
+            JPanel tituloPecas = new JPanel(new BorderLayout(0, 6));
+            tituloPecas.setBackground(BG_CARD);
+            tituloPecas.add(lbl("Peças Recomendadas (marque e defina a quantidade):"), BorderLayout.NORTH);
+            tituloPecas.add(topoPecas, BorderLayout.CENTER);
+            blocoPecas.add(tituloPecas, BorderLayout.NORTH);
             blocoPecas.add(scrollPecas, BorderLayout.CENTER);
             blocoPecas.add(barraBotoes, BorderLayout.SOUTH);
 
-            txtBusca.getDocument().addDocumentListener(new DocumentListener() {
-                @Override public void insertUpdate(DocumentEvent e) { filtrar(txtBusca.getText()); }
-                @Override public void removeUpdate(DocumentEvent e) { filtrar(txtBusca.getText()); }
-                @Override public void changedUpdate(DocumentEvent e) { filtrar(txtBusca.getText()); }
+            // ---------- Botões finais ----------
+            JButton btnCancelar = new JButton("Cancelar");
+            estilizarBotao(btnCancelar, BG_APP, TEXT);
+            btnCancelar.addActionListener(e -> dlg.dispose());
 
-                private void filtrar(String termo) {
-                    String q = termo.toLowerCase().trim();
-                    int visiveis = 0, marcados = 0;
-                    for (int i = 0; i < chks.size(); i++) {
-                        JCheckBox c = chks.get(i);
-                        boolean match = c.getText().toLowerCase().contains(q);
-                        c.setVisible(match);   // esconde/reexibe a linha na grade
-                        if (match) visiveis++;
-                        if (c.isSelected()) marcados++;
+            JButton btnSalvar = new JButton("Salvar");
+            estilizarBotao(btnSalvar, PRIMARY, Color.WHITE);
+            btnSalvar.addActionListener(e -> {
+                try {
+                    String nome = txtNome.getText().trim();
+                    if (nome.isEmpty()) throw new RuntimeException("Informe o nome do tipo.");
+
+                    TipoMaquina t = new TipoMaquina(0, nome, txtFab.getText().trim(), (int) spVida.getValue());
+                    for (int i = 0; i < todasPecas.size(); i++) {
+                        if (chks.get(i).isSelected()) {
+                            t.adicionarPecaRecomendada(todasPecas.get(i), (int) spins.get(i).getValue());
+                        }
                     }
-                    // Reaplica o mesmo esquema para os spinners ao lado dos checkboxes ocultos
-                    for (int j = 0; j < spins.size(); j++) {
-                        JSpinner sp = spins.get(j);
-                        boolean match = chks.get(j).getText().toLowerCase().contains(q);
-                        sp.setVisible(match);
-                    }
-                    lblConta.setText((marcados == 0 ? "Nenhum marcado" : marcados + " marcado" + (marcados > 1 ? "s" : ""))
-                            + " · " + visiveis + " de " + chks.size() + " peças exibidas");
-                    painelPecas.revalidate();
-                    painelPecas.repaint();
-                }
+                    service.cadastrarTipoMaquina(t);
+                    dlg.dispose();
+                    mostrarInfo("Tipo cadastrado!");
+                    atualizarTudo();
+                } catch (Exception ex) { mostrarErro(ex); }
             });
 
-            btnTodos.addActionListener(e -> {
-                chks.forEach(c -> c.setSelected(true));
-                atualizarContadorSelecao(lblConta, chks);
-            });
-            btnLimpar.addActionListener(e -> {
-                chks.forEach(c -> c.setSelected(false));
-                atualizarContadorSelecao(lblConta, chks);
-            });
+            JPanel rodape = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
+            rodape.setBackground(BG_CARD);
+            rodape.setBorder(new EmptyBorder(4, 16, 8, 16));
+            rodape.add(btnCancelar); rodape.add(btnSalvar);
 
-            // ---- Formulário principal ----
-            JPanel form = new JPanel(new GridBagLayout());
-            form.setBackground(classicBg());
-            GridBagConstraints g = new GridBagConstraints();
-            g.fill = GridBagConstraints.HORIZONTAL; g.insets = new Insets(4, 4, 4, 4); g.weightx = 1; g.gridx = 0;
+            dlg.add(dados, BorderLayout.NORTH);
+            dlg.add(blocoPecas, BorderLayout.CENTER);   // CENTER = ocupa todo o espaço restante
+            dlg.add(rodape, BorderLayout.SOUTH);
 
-            g.gridy = 0; form.add(lblClassic("Nome do Tipo:"), g);
-            g.gridy = 1; form.add(txtNome, g);
-            g.gridy = 2; form.add(lblClassic("Fabricante:"), g);
-            g.gridy = 3; form.add(txtFab, g);
-            g.gridy = 4; form.add(lblClassic("Vida Útil (anos):"), g);
-            g.gridy = 5; form.add(spVida, g);
-            g.gridy = 6; form.add(lblClassic("Peças Recomendadas:"), g);
-            g.gridy = 7; form.add(blocoPecas, g);
-
-            JOptionPane pane = new JOptionPane(form, JOptionPane.PLAIN_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
-            JDialog dlg = pane.createDialog(this, "Novo Tipo de Máquina");
-            estilizarDialog(dlg.getContentPane());
+            reconstruir.run();
             dlg.setVisible(true);
-
-            if (pane.getValue() == null || (Integer) pane.getValue() != JOptionPane.OK_OPTION) return;
-
-            String nome = txtNome.getText().trim();
-            if (nome.isEmpty()) return;
-
-            TipoMaquina t = new TipoMaquina(0, nome, txtFab.getText().trim(), (int) spVida.getValue());
-            for (int i = 0; i < todasPecas.size(); i++) {
-                if (chks.get(i).isSelected()) {
-                    t.adicionarPecaRecomendada(todasPecas.get(i), (int) spins.get(i).getValue());
-                }
-            }
-
-            service.cadastrarTipoMaquina(t);
-            mostrarInfo("Tipo cadastrado!");
-            atualizarTudo();
         } catch (Exception e) { mostrarErro(e); }
     }
 
@@ -1535,7 +1594,33 @@ public class App extends JFrame {
             atualizarTudo();
         } catch (Exception e) { mostrarErro(e); }
     }
+    
+        private void concluirManutencao() {
+        try {
+            Integer idMan = lerInteiro("ID da Manutenção:");
+            if (idMan == null) return;
 
+            Manutencao man = service.buscarManutencao(idMan);
+            if ("CONCLUIDA".equals(man.getStatus())) {
+                throw new RuntimeException("Manutenção já concluída.");
+            }
+
+            int anos = 0;
+            if (man.recuperaVidaUtil()) {                 // só a preventiva pergunta
+                Integer escolhido = escolherAnosRecuperados(man.getMaquina());
+                if (escolhido == null) return;             // cancelou: não conclui
+                anos = escolhido;
+            }
+
+            service.concluirManutencao(idMan, anos);
+            if (anos > 0) {
+                mostrarInfo("Preventiva concluída! Saúde renovada para 100% com vida útil estimada de " + anos + " ano(s).");
+            }
+            atualizarTudo();
+        } catch (Exception e) { mostrarErro(e); }
+    }
+
+    /** Caixa de opções (1 a 20 anos) exibida ao concluir uma manutenção preventiva. */
     private Integer escolherAnosRecuperados(Maquina m) {
         Integer[] anos = new Integer[20];
         for (int i = 0; i < anos.length; i++) anos[i] = i + 1;
@@ -1545,7 +1630,7 @@ public class App extends JFrame {
 
         JLabel info = new JLabel("<html>Máquina: " + m.getNumeroSerie()
                 + "<br>Saúde atual: " + m.getSaudeEquipamento() + "%"
-                + "<br><br>Quantos anos de desgaste esta preventiva recupera?</html>");
+                + "<br><br>Nova estimativa de vida útil (anos) após esta preventiva:</html>");
         info.setForeground(TEXT);
 
         Object[] msg = {info, cbAnos};
@@ -1559,31 +1644,6 @@ public class App extends JFrame {
             return (Integer) cbAnos.getSelectedItem();
         }
         return null;
-    }
-    
-    private void concluirManutencao() {
-        try {
-            Integer idMan = lerInteiro("ID da Manutenção:");
-            if (idMan == null) return;
-
-            Manutencao man = service.buscarManutencao(idMan);
-            if ("CONCLUIDA".equals(man.getStatus())) {
-                throw new RuntimeException("Manutenção já concluída.");
-            }
-
-            int anos = 0;
-            if (man.recuperaVidaUtil()) {               // só a preventiva pergunta
-                Integer escolhido = escolherAnosRecuperados(man.getMaquina());
-                if (escolhido == null) return;           // cancelou: não conclui
-                anos = escolhido;
-            }
-
-            service.concluirManutencao(idMan, anos);
-            if (anos > 0) {
-                mostrarInfo("Preventiva concluída! " + anos + " ano(s) de desgaste recuperado(s).");
-            }
-            atualizarTudo();
-        } catch (Exception e) { mostrarErro(e); }
     }
 
         private void abrirTelaExclusao() {
@@ -1837,19 +1897,6 @@ public class App extends JFrame {
         JLabel l = new JLabel(texto);
         l.setForeground(Color.BLACK);
         return l;
-    }
-
-    /** Atualiza o rótulo de contagem da seleção no diálogo de Tipo de Máquina. */
-    private void atualizarContadorSelecao(JLabel lbl, List<JCheckBox> chks) {
-        int total = chks.size(), visiveis = 0, marcados = 0;
-        for (JCheckBox c : chks) {
-            if (c.isVisible()) {
-                visiveis++;
-                if (c.isSelected()) marcados++;
-            }
-        }
-        lbl.setText((marcados == 0 ? "Nenhum marcado" : marcados + " marcado" + (marcados > 1 ? "s" : ""))
-                + " · " + visiveis + " de " + total + " peças exibidas");
     }
 
     public static void main(String[] args) {
