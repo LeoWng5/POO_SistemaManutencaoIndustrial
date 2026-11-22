@@ -49,4 +49,5 @@ public abstract class Manutencao {
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
     public List<ItemPeca> getItens() { return itens; }
+    public boolean recuperaVidaUtil() { return false; }
 }

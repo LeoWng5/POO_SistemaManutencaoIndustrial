@@ -15,8 +15,8 @@ public class MaquinaDAO {
     private final TipoMaquinaDAO tipoDAO = new TipoMaquinaDAO();
 
     public void inserir(Connection conn, Maquina m) throws SQLException {
-        String sql = "INSERT INTO maquina (numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id) "
-                   + "VALUES (?, ?, ?, ?, ?, ?)";
+                String sql = "INSERT INTO maquina (numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id, dias_recuperados) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, m.getNumeroSerie());
             ps.setString(2, m.getStatus());
@@ -24,18 +24,20 @@ public class MaquinaDAO {
             ps.setDouble(4, m.getValorAquisicao());
             ps.setString(5, m.getFoto());
             ps.setInt(6, m.getTipo().getId());
+            ps.setLong(7, m.getDiasRecuperados());
             ps.executeUpdate();
         }
         m.setId(SqlUtil.ultimoId(conn));
     }
 
     public Maquina buscarPorId(Connection conn, int id) throws SQLException {
-        String sql = "SELECT numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id "
-                   + "FROM maquina WHERE id = ?";
+        String sql = "SELECT numero_serie, status, data_aquisicao, valor_aquisicao, url_foto, tipo_maquina_id, dias_recuperados "
+           + "FROM maquina WHERE id = ?";
         String serie, status, foto;
         LocalDate data;
         double valor;
         int tipoId;
+        long recuperados;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -46,10 +48,11 @@ public class MaquinaDAO {
                 valor = rs.getDouble("valor_aquisicao");
                 foto = rs.getString("url_foto");
                 tipoId = rs.getInt("tipo_maquina_id");
+                recuperados = rs.getLong("dias_recuperados");
             }
         }
         TipoMaquina tipo = tipoDAO.buscarPorId(conn, tipoId);
-        return new Maquina(id, serie, status, data, valor, tipo, foto);
+        return new Maquina(id, serie, status, data, valor, tipo, foto, recuperados);
     }
 
     public List<Maquina> listar(Connection conn) throws SQLException {

@@ -11,6 +11,7 @@ public class Maquina extends Equipamento {
     private double valorAquisicao;
     private TipoMaquina tipo;
     private String caminhoFoto;
+    private long diasRecuperados;
 
     public Maquina(int id, String numeroSerie, String status, LocalDate dataAquisicao,
                    double valorAquisicao, TipoMaquina tipo, String caminhoFoto) {
@@ -20,12 +21,14 @@ public class Maquina extends Equipamento {
         this.valorAquisicao = valorAquisicao;
         this.tipo = tipo;
         this.caminhoFoto = caminhoFoto;
+        this.diasRecuperados = Math.max(0, diasRecuperados);
     }
 
     /** Construtor antigo mantido para compatibilidade (valor = 0). */
     public Maquina(int id, String numeroSerie, String status, LocalDate dataAquisicao,
-                   TipoMaquina tipo, String caminhoFoto) {
-        this(id, numeroSerie, status, dataAquisicao, 0.0, tipo, caminhoFoto);
+                   double valorAquisicao, TipoMaquina tipo, String caminhoFoto, long diasRecuperados) {
+        this(id, numeroSerie, status, dataAquisicao, valorAquisicao, tipo, caminhoFoto);
+        this.diasRecuperados = Math.max(0, diasRecuperados);
     }
 
     public String getNumeroSerie() { return numeroSerie; }
@@ -44,7 +47,7 @@ public class Maquina extends Equipamento {
     public int getSaudeEquipamento() {
         int anos = (tipo != null && tipo.getVidaUtilAnos() > 0) ? tipo.getVidaUtilAnos() : 5;
         long vidaUtilDias = (long) anos * 365L;
-        long diasDeUso = ChronoUnit.DAYS.between(this.dataAquisicao, RelogioSistema.hoje());
+        long diasDeUso = getDiasDeUsoEfetivos();
         if (diasDeUso <= 0) return 100;
         if (diasDeUso >= vidaUtilDias) return 0;
         double saude = 100.0 - ((double) diasDeUso / vidaUtilDias * 100.0);
@@ -57,6 +60,24 @@ public class Maquina extends Equipamento {
     /** Valor residual estimado pela saúde atual (valor * saúde / 100). */
     public double getValorResidual() {
         return valorAquisicao * getSaudeEquipamento() / 100.0;
+    }
+
+    public long getDiasRecuperados() { return diasRecuperados; }
+
+    /** Dias de uso que ainda contam para a depreciação (uso real menos o que foi recuperado). */
+    public long getDiasDeUsoEfetivos() {
+        long bruto = ChronoUnit.DAYS.between(this.dataAquisicao, RelogioSistema.hoje());
+        return Math.max(0, bruto - diasRecuperados);
+    }
+
+    /**
+     * Recupera até N anos de desgaste (efeito de uma manutenção preventiva).
+     * Nunca recupera mais do que o desgaste existente, então a saúde fica no máximo em 100%.
+     */
+    public void rejuvenescer(int anos) {
+        if (anos <= 0) throw new IllegalArgumentException("Informe pelo menos 1 ano.");
+        long recuperar = Math.min(anos * 365L, getDiasDeUsoEfetivos());
+        this.diasRecuperados += recuperar;
     }
 
     @Override

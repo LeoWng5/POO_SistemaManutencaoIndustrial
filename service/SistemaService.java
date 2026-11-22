@@ -232,7 +232,22 @@ public class SistemaService {
         }
     }
 
-    public double concluirManutencao(int idManutencao) 
+        public Manutencao buscarManutencao(int idManutencao) throws ManutencaoInexistenteException {
+        try (Connection c = ConexaoDB.getConexao()) {
+            Manutencao m = manutencaoDAO.buscarPorId(c, idManutencao);
+            if (m == null) throw new ManutencaoInexistenteException("Manutenção não encontrada.");
+            return m;
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
+        }
+    }
+
+    public double concluirManutencao(int idManutencao)
+            throws ManutencaoInexistenteException, ManutencaoFinalizadaException {
+        return concluirManutencao(idManutencao, 0);
+    }
+
+    public double concluirManutencao(int idManutencao, int anosRecuperados)
             throws ManutencaoInexistenteException, ManutencaoFinalizadaException {
         try (Connection c = ConexaoDB.getConexao()) {
             Manutencao m = manutencaoDAO.buscarPorId(c, idManutencao);
@@ -242,17 +257,23 @@ public class SistemaService {
             double custoFinal = m.calcularCusto();
             m.setStatus("CONCLUIDA");
             m.setCusto(custoFinal);
-            
             manutencaoDAO.atualizar(c, m);
-            
+
             if (m.getTecnico() != null) {
                 tecnicoDAO.atualizarDisponibilidade(c, m.getTecnico().getId(), true);
             }
+
+            // Polimorfismo: só a preventiva recupera vida útil
+            if (m.recuperaVidaUtil() && anosRecuperados > 0) {
+                Maquina maq = m.getMaquina();
+                maq.rejuvenescer(anosRecuperados);
+                maquinaDAO.atualizar(c, maq);
+            }
             maquinaDAO.atualizarStatus(c, m.getMaquina().getId(), "ATIVA");
-            
+
             return custoFinal;
-        } catch (SQLException e) { 
-            throw SqlUtil.traduzir(e); 
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
         }
     }
 

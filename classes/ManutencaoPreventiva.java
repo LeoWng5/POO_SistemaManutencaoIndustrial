@@ -21,4 +21,7 @@ public class ManutencaoPreventiva extends Manutencao {
     public void setPeriodicidadeDias(int periodicidadeDias) { this.periodicidadeDias = periodicidadeDias; }
     public LocalDate getProximaData() { return proximaData; }
     public void setProximaData(LocalDate proximaData) { this.proximaData = proximaData; }
+    
+    @Override
+    public boolean recuperaVidaUtil() { return true; }
 }

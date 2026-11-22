@@ -1536,11 +1536,52 @@ public class App extends JFrame {
         } catch (Exception e) { mostrarErro(e); }
     }
 
+    private Integer escolherAnosRecuperados(Maquina m) {
+        Integer[] anos = new Integer[20];
+        for (int i = 0; i < anos.length; i++) anos[i] = i + 1;
+
+        JComboBox<Integer> cbAnos = new JComboBox<>(anos);
+        estilizarCombo(cbAnos);
+
+        JLabel info = new JLabel("<html>Máquina: " + m.getNumeroSerie()
+                + "<br>Saúde atual: " + m.getSaudeEquipamento() + "%"
+                + "<br><br>Quantos anos de desgaste esta preventiva recupera?</html>");
+        info.setForeground(TEXT);
+
+        Object[] msg = {info, cbAnos};
+        JOptionPane pane = new JOptionPane(msg, JOptionPane.QUESTION_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
+        JDialog dlg = pane.createDialog(this, "Concluir Preventiva");
+        estilizarDialog(dlg.getContentPane());
+        dlg.setVisible(true);
+
+        Object v = pane.getValue();
+        if (v instanceof Integer && (Integer) v == JOptionPane.OK_OPTION) {
+            return (Integer) cbAnos.getSelectedItem();
+        }
+        return null;
+    }
+    
     private void concluirManutencao() {
         try {
             Integer idMan = lerInteiro("ID da Manutenção:");
             if (idMan == null) return;
-            service.concluirManutencao(idMan);
+
+            Manutencao man = service.buscarManutencao(idMan);
+            if ("CONCLUIDA".equals(man.getStatus())) {
+                throw new RuntimeException("Manutenção já concluída.");
+            }
+
+            int anos = 0;
+            if (man.recuperaVidaUtil()) {               // só a preventiva pergunta
+                Integer escolhido = escolherAnosRecuperados(man.getMaquina());
+                if (escolhido == null) return;           // cancelou: não conclui
+                anos = escolhido;
+            }
+
+            service.concluirManutencao(idMan, anos);
+            if (anos > 0) {
+                mostrarInfo("Preventiva concluída! " + anos + " ano(s) de desgaste recuperado(s).");
+            }
             atualizarTudo();
         } catch (Exception e) { mostrarErro(e); }
     }

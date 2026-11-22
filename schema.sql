@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS maquina (
     data_aquisicao TEXT NOT NULL,
     valor_aquisicao REAL NOT NULL DEFAULT 0,
     url_foto TEXT,
+    dias_recuperados INTEGER NOT NULL DEFAULT 0,
     tipo_maquina_id INTEGER NOT NULL,
     FOREIGN KEY (tipo_maquina_id) REFERENCES tipo_maquina(id)
 );
