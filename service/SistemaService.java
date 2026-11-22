@@ -101,7 +101,47 @@ public class SistemaService {
         catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
-    // ================= OPERAÇÕES =================
+        // ================= EXCLUSÕES (ADMIN) =================
+
+    public boolean excluirManutencao(int id) {
+        try (Connection c = ConexaoDB.getConexao()) {
+            // Devolve as peças pro estoque antes de apagar (opcional, mas seguro)
+            Manutencao m = manutencaoDAO.buscarPorId(c, id);
+            if (m == null) return false;
+            
+            if (m.getTecnico() != null && !m.getStatus().equals("CONCLUIDA")) {
+                tecnicoDAO.atualizarDisponibilidade(c, m.getTecnico().getId(), true);
+            }
+            
+            return manutencaoDAO.excluir(c, id);
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
+        }
+    }
+
+    public boolean excluirTecnico(int id) {
+        try (Connection c = ConexaoDB.getConexao()) {
+            return tecnicoDAO.excluir(c, id);
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
+        }
+    }
+
+    public boolean excluirPeca(int id) {
+        try (Connection c = ConexaoDB.getConexao()) {
+            return pecaDAO.excluir(c, id);
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
+        }
+    }
+
+    public boolean excluirTipoMaquina(int id) {
+        try (Connection c = ConexaoDB.getConexao()) {
+            return tipoMaquinaDAO.excluir(c, id);
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
+        }
+    }
     public boolean excluirMaquina(int id) {
         try (Connection c = ConexaoDB.getConexao()) { return maquinaDAO.excluir(c, id); } 
         catch (SQLException e) { throw SqlUtil.traduzir(e); }
