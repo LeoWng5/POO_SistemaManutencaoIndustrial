@@ -1647,7 +1647,7 @@ public class App extends JFrame {
     }
 
         private void abrirTelaExclusao() {
-        String[] opcoes = {"Máquina", "Técnico", "Peça do Estoque", "Tipo de Máquina", "Manutenção"};
+        String[] opcoes = {"Máquina", "Técnico", "Peça do Estoque", "Tipo de Máquina", "Tipo de Técnico", "Manutenção"};
         String tipo = (String) JOptionPane.showInputDialog(this, 
                 "O que você deseja excluir do sistema?\n(Esta ação não pode ser desfeita)", 
                 "Exclusão de Registro", 
@@ -1667,6 +1667,7 @@ public class App extends JFrame {
                 case "Técnico" -> sucesso = service.excluirTecnico(id);
                 case "Peça do Estoque" -> sucesso = service.excluirPeca(id);
                 case "Tipo de Máquina" -> sucesso = service.excluirTipoMaquina(id);
+                case "Tipo de Técnico" -> sucesso = service.excluirTecnico(id);
                 case "Manutenção" -> sucesso = service.excluirManutencao(id);
             }
 

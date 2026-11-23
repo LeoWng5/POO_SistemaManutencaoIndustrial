@@ -159,6 +159,21 @@ public class SistemaService {
         catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
+    public boolean excluirTipoTecnico(int id) {
+    try (Connection c = ConexaoDB.getConexao()) {
+        // Proteção: não deixa excluir uma especialidade que ainda tem técnicos
+        boolean emUso = tecnicoDAO.listar(c).stream()
+                .anyMatch(t -> t.getTipo() != null && t.getTipo().getId() == id);
+        if (emUso) {
+            throw new IllegalStateException(
+                "Não é possível excluir: existem técnicos cadastrados com esta especialidade.");
+        }
+        return tipoTecnicoDAO.excluir(c, id);
+        } catch (SQLException e) {
+            throw SqlUtil.traduzir(e);
+        }
+    }
+
     // ================= OPERAÇÕES =================
     public void registrarFalha(String descricao, int idMaquina) throws MaquinaInexistenteException {
         try (Connection c = ConexaoDB.getConexao()) {
