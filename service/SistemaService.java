@@ -107,10 +107,14 @@ public class SistemaService {
         catch (SQLException e) { throw SqlUtil.traduzir(e); }
     }
 
-    public void cadastrarPeca(Peca p) {
-        try (Connection c = ConexaoDB.getConexao()) { pecaDAO.inserir(c, p); }
-        catch (SQLException e) { throw SqlUtil.traduzir(e); }
+    public void cadastrarPeca(Peca p) throws QuantidadeNegativaException {
+    if (p.getQuantidadeEstoque() < 0) {
+        throw new QuantidadeNegativaException(
+            "Não é possível cadastrar uma peça com quantidade negativa (" + p.getQuantidadeEstoque() + ").");
     }
+    try (Connection c = ConexaoDB.getConexao()) { pecaDAO.inserir(c, p); }
+    catch (SQLException e) { throw SqlUtil.traduzir(e); }
+}
 
     // ================= EXCLUSÕES (ADMIN) =================
 
